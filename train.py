@@ -1,7 +1,6 @@
 # generic for training
 import torch
-
-
+import rich
 def train(epoch, tokenizer, model, device, loader, optimizer, logger):
     model.train()
 
@@ -27,7 +26,7 @@ def train(epoch, tokenizer, model, device, loader, optimizer, logger):
 
         if _ % 100 == 0:
             logger.add_row(str(epoch), str(_), str(loss))
-            print(logger)
+            rich.print(logger)
 
         # clears old gradients from last step - so that they do not accumulate everytime you do loss.backwards
         optimizer.zero_grad()
