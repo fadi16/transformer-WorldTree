@@ -41,6 +41,7 @@ def t5_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str,
 
     # send to GPU/TPU
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    print("USING DEVICE " + device)
     model = model.to(device)
 
     # importing data
