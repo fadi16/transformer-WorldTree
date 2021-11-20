@@ -129,7 +129,8 @@ def t5_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str,
             print("Predictions vs Actuals")
             print(predictions, actuals)
 
-            metric.add_batch(predictions, actuals)
+            metric.add_batch(predictions=predictions,
+                             references=actuals)
             eval_score = metric.compute()["scores"]
             final_df = pd.DataFrame({
                 "Questions": val_dataset[source_text],
