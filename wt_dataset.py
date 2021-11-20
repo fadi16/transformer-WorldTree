@@ -7,11 +7,9 @@ from transformers import T5Tokenizer, T5ForConditionalGeneration
 from model_params import *
 from rich.table import Column, Table
 from rich import box
-from rich.console import Console
 
 
 def display_df(df):
-    console = Console()
     table = Table(
         Column("source_text", justify="center"),
         Column("target_text", justify="center"),
@@ -22,7 +20,7 @@ def display_df(df):
     for i, row in enumerate(df.values.tolist()):
         table.add_row(row[0], row[1])
 
-    console.print(table)
+    print(table)
 
 
 class WorldTreeDataset(Dataset):

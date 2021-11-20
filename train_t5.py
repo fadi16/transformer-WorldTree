@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from rich import box
 from rich.table import Table, Column
-from rich.console import Console
 
 from model_params import MAX_TARGET_TEXT_LENGTH, SEED, MAX_SOURCE_TEXT_LENGTH, MODEL, TRAIN_BATCH_SIZE, VALID_BATCH_SIZE, TRAIN_EPOCHS, VAL_EPOCHS, LEARNING_RATE
 import torch
@@ -26,12 +25,10 @@ def set_seed(model_params):
 def t5_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str, target_text: str, model_params,
                output_dir="./outputs"):
 
-    console = Console(record=True)
-
     # for reproducibility
     set_seed(model_params)
 
-    console.log("LOADING MODEL ...\n")
+    print("LOADING MODEL ...\n")
 
     # T5 tokenizer
     tokenizer = T5Tokenizer.from_pretrained(model_params[MODEL])
@@ -41,12 +38,12 @@ def t5_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str,
 
     # send to GPU/TPU
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    console.log("USING DEVICE " + device)
+    print("USING DEVICE " + device)
     model = model.to(device)
 
     # importing data
     train_dataset = train_set[[source_text, target_text]]
-    console.print(f"TRAIN Dataset: {train_dataset.shape}\n")
+    print(f"TRAIN Dataset: {train_dataset.shape}\n")
 
     training_dataset = WorldTreeDataset(
         dataframe=train_dataset,
@@ -64,7 +61,7 @@ def t5_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str,
     )
 
     val_dataset = dev_set[[source_text, target_text]]
-    console.print(f"TEST Dataset: {val_dataset.shape}\n")
+    print(f"TEST Dataset: {val_dataset.shape}\n")
 
     validation_dataset = WorldTreeDataset(
         dataframe=val_dataset,
@@ -111,18 +108,17 @@ def t5_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str,
     metric = load_metric("bleurt", "bleurt-large-512")
 
     for training_epoch in range(model_params[TRAIN_EPOCHS]):
-        console.log("STARTING TRAINING EPOCH: " + str(training_epoch) + "\n")
+        print("STARTING TRAINING EPOCH: " + str(training_epoch) + "\n")
         train(epoch=training_epoch,
               tokenizer=tokenizer,
               model=model,
               device=device,
               loader=training_loader,
               optimizer=optimizer,
-              console=console,
               logger=training_logger)
 
         # evaluate at the end of each epoch
-        console.log("Validating after training epoch #{0}\n".format(str(training_epoch)))
+        print("Validating after training epoch #{0}\n".format(str(training_epoch)))
         for validation_epoch in range(model_params[VAL_EPOCHS]):
             predictions, actuals = validate(epoch=validation_epoch,
                                             tokenizer=tokenizer,
@@ -145,16 +141,15 @@ def t5_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str,
                 best_val_score = eval_score
                 # save predictions
                 final_df.to_csv(os.path.join(output_dir, "predictions.csv"))
-                console.log("SAVED PREDICTIONS AT " + os.path.join(output_dir, "predictions.csv") + "\n")
+                print("SAVED PREDICTIONS AT " + os.path.join(output_dir, "predictions.csv") + "\n")
                 # save model and tokenizer
                 # todo why save tokenizer?
                 model_checkpoint_path = os.path.join(output_dir, "checkpoints")
                 model.save_pretrained(model_checkpoint_path)
                 tokenizer.save_pretrained(model_checkpoint_path)
-                console.log("SAVED MODEL AT " + model_checkpoint_path + "\n")
-                console.save_text(os.path.join(output_dir, "console.log"))
+                print("SAVED MODEL AT " + model_checkpoint_path + "\n")
 
-            console.log("VALIDATION DONE - BEST BLEURT SCORE = {0}, CURRENT BLEURT SCORE = {1}\n".format(best_val_score, eval_score))
+            print("VALIDATION DONE - BEST BLEURT SCORE = {0}, CURRENT BLEURT SCORE = {1}\n".format(best_val_score, eval_score))
 
 
 
