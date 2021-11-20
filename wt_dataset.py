@@ -7,6 +7,7 @@ from transformers import T5Tokenizer, T5ForConditionalGeneration
 from model_params import *
 from rich.table import Column, Table
 from rich import box
+import rich
 
 
 def display_df(df):
@@ -20,7 +21,7 @@ def display_df(df):
     for i, row in enumerate(df.values.tolist()):
         table.add_row(row[0], row[1])
 
-    print(table)
+    rich.print(table)
 
 
 class WorldTreeDataset(Dataset):
@@ -99,8 +100,7 @@ if __name__ == "__main__":
     df_train = pd.read_csv(training_data_path, delimiter="\t")
     df_dev = pd.read_csv(dev_data_path, delimiter="\t")
 
-    print(df_dev.head(2))
-    print(df_dev[["Questions", "Explanations"]].head(2))
+    display_df(df_dev[["Questions", "Explanations"]].head(1))
     # print(df_dev.head(1)["Explanations"])
     #
     # tokenizer = T5Tokenizer.from_pretrained(model_params["MODEL"])
