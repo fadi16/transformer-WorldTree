@@ -41,13 +41,15 @@ def t5_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str,
 
     # send to GPU/TPU
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print("USING DEVICE " + device)
+    console.log("USING DEVICE " + device)
     model = model.to(device)
 
     # importing data
-    train_set = train_set[[source_text, target_text]]
+    train_dataset = train_set[[source_text, target_text]]
+    console.print(f"TRAIN Dataset: {train_dataset.shape}\n")
+
     training_dataset = WorldTreeDataset(
-        dataframe=train_set,
+        dataframe=train_dataset,
         tokenizer=tokenizer,
         target_len=model_params[MAX_TARGET_TEXT_LENGTH],
         source_len=model_params[MAX_SOURCE_TEXT_LENGTH],
@@ -62,6 +64,8 @@ def t5_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str,
     )
 
     val_dataset = dev_set[[source_text, target_text]]
+    console.print(f"TEST Dataset: {val_dataset.shape}\n")
+
     validation_dataset = WorldTreeDataset(
         dataframe=val_dataset,
         tokenizer=tokenizer,
