@@ -61,7 +61,7 @@ def t5_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str,
     )
 
     val_dataset = dev_set[[source_text, target_text]]
-    print(f"TEST Dataset: {val_dataset.shape}\n")
+    print(f"VALIDATION Dataset: {val_dataset.shape}\n")
 
     validation_dataset = WorldTreeDataset(
         dataframe=val_dataset,
