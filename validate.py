@@ -19,6 +19,9 @@ def validate(epoch, tokenizer, model, device, loader, model_params):
             source_mask = data["source_mask"].to(device, dtype=torch.long)
             target_ids = data["target_ids"].to(device, dtype=torch.long)
 
+            # At inference time, it is recommended to use generate(). This method takes care of encoding
+            # the input and feeding the encoded hidden states via cross-attention layers to the decoder and
+            # auto-regressively generates the decoder output
             generated_ids = model.generate(
                 input_ids=source_ids,
                 attention_mask=source_mask,

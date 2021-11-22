@@ -80,7 +80,7 @@ def t5_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str,
 
     # todo: what about test set?
 
-    # optimizer
+    # optimizer: this is the optimizer recommended for T5
     optimizer = Adafactor(
         model.parameters(),
         lr=1e-3,

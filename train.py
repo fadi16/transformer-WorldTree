@@ -10,6 +10,8 @@ def train(epoch, tokenizer, model, device, loader, optimizer, logger):
         # todo: what are these?
         y_ids = y[:, :-1].contiguous()
         lm_labels = y[:, 1:].clone().detach()
+        # In addition, we must make sure that padding token id’s of the labels are not taken into account by the loss function.
+        # In PyTorch and Tensorflow, this can be done by replacing them with -100, which is the ignore_index of the CrossEntropyLoss
         lm_labels[y[:, 1:] == tokenizer.pad_token_id] = -100
         ids = data["source_ids"].to(device, dtype=torch.long)
         mask = data["source_mask"].to(device, dtype=torch.long)
@@ -18,7 +20,7 @@ def train(epoch, tokenizer, model, device, loader, optimizer, logger):
         outputs = model(
             input_ids=ids,
             attention_mask=mask,
-            decoder_input_ids=y_ids,
+            decoder_input_ids=y_ids, # todo this is not needed according to the documentation
             labels=lm_labels
         )
 

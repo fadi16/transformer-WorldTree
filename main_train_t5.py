@@ -3,8 +3,9 @@ from train_t5 import t5_trainer
 from model_params import model_params
 
 if __name__ == "__main__":
-    path_train = "./data/eb_train_chains.csv"
-    path_dev = "./data/eb_dev_chains.csv"
+    path_train = "./data/v2-proper-data/train_data.csv"
+    path_dev = "./data/v2-proper-data/dev_data.csv"
+
 
     df_train = pd.read_csv(path_train, delimiter="\t")
     print(df_train.head())
@@ -15,8 +16,8 @@ if __name__ == "__main__":
     t5_trainer(
         train_set=df_train,
         dev_set=df_dev,
-        source_text="Questions",
-        target_text="Explanations",
+        source_text="hypothesis",
+        target_text="explanation",
         model_params=model_params,
         output_dir="./outputs",
     )

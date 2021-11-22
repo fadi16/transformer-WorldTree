@@ -94,13 +94,14 @@ class WorldTreeDataset(Dataset):
 
 
 if __name__ == "__main__":
-    training_data_path = "./data/eb_train_chains.csv"
-    dev_data_path = "./data/eb_dev_chains.csv"
-
-    df_train = pd.read_csv(training_data_path, delimiter="\t")
-    df_dev = pd.read_csv(dev_data_path, delimiter="\t")
-
-    display_df(df_dev[["Questions", "Explanations"]].head(1))
+    pass
+    # training_data_path = "./data/eb_train_chains.csv"
+    # dev_data_path = "./data/eb_dev_chains.csv"
+    #
+    # df_train = pd.read_csv(training_data_path, delimiter="\t")
+    # df_dev = pd.read_csv(dev_data_path, delimiter="\t")
+    #
+    # display_df(df_dev[["Questions", "Explanations"]].head(1))
     # print(df_dev.head(1)["Explanations"])
     #
     # tokenizer = T5Tokenizer.from_pretrained(model_params["MODEL"])
