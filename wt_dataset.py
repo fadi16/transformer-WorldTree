@@ -2,28 +2,6 @@ import torch
 from torch.utils.data import Dataset, DataLoader, RandomSampler, SequentialSampler
 import pandas as pd
 
-pd.set_option('display.max_colwidth', 1000)
-from transformers import T5Tokenizer, T5ForConditionalGeneration
-from model_params import *
-from rich.table import Column, Table
-from rich import box
-import rich
-
-
-def display_df(df):
-    table = Table(
-        Column("source_text", justify="center"),
-        Column("target_text", justify="center"),
-        title="Sample Data",
-        pad_edge=False,
-        box=box.ASCII,
-    )
-    for i, row in enumerate(df.values.tolist()):
-        table.add_row(row[0], row[1])
-
-    rich.print(table)
-
-
 class WorldTreeDataset(Dataset):
     """
     creating dataset to be passed to the dataloader and then to the neural network
