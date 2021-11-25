@@ -9,10 +9,10 @@ from model_params import MAX_TARGET_TEXT_LENGTH, SEED, MAX_SOURCE_TEXT_LENGTH, M
     VALID_BATCH_SIZE, TRAIN_EPOCHS, VAL_EPOCHS, LEARNING_RATE
 import torch
 import numpy as np
-from transformers import T5Tokenizer, T5ForConditionalGeneration
+from transformers import BartTokenizer, BartForConditionalGeneration
 from wt_dataset import WorldTreeDataset
 from torch.utils.data import DataLoader
-from transformers.optimization import Adafactor
+from transformers.optimization import AdamW
 from datasets import load_metric
 from train import train
 from validate import validate
@@ -24,7 +24,7 @@ def set_seed(model_params):
     torch.backends.cudnn.deterministic = True
 
 
-def t5_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str, target_text: str, model_params,
+def bart_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str, target_text: str, model_params,
                output_dir="./outputs"):
     # for reproducibility
     set_seed(model_params)
@@ -32,10 +32,10 @@ def t5_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str,
     print("LOADING MODEL ...\n")
 
     # T5 tokenizer
-    tokenizer = T5Tokenizer.from_pretrained(model_params[MODEL])
+    tokenizer = BartTokenizer.from_pretrained(model_params[MODEL])
 
     # T5 model for conditional generation
-    model = T5ForConditionalGeneration.from_pretrained(model_params[MODEL])
+    model = BartForConditionalGeneration.from_pretrained(model_params[MODEL])
 
     # send to GPU/TPU
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -81,18 +81,9 @@ def t5_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str,
 
     # todo: what about test set?
 
-    # optimizer: this is the optimizer recommended for T5
-    optimizer = Adafactor(
-        model.parameters(),
-        lr=1e-3,
-        eps=(1e-30, 1e-3),
-        clip_threshold=1.0,
-        decay_rate=-0.8,
-        beta1=None,
-        weight_decay=0.0,
-        relative_step=False,
-        scale_parameter=False,
-        warmup_init=False
+    optimizer = AdamW(
+        params=model.parameters(),
+        lr=model_params[LEARNING_RATE]
     )
 
     training_logger = Table(

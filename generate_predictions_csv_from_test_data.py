@@ -1,30 +1,36 @@
 import torch
-from transformers import T5ForConditionalGeneration, T5Tokenizer
+from transformers import T5ForConditionalGeneration, T5Tokenizer,BartForConditionalGeneration, BartTokenizer
 import pandas as pd
-from model_params import model_params, MAX_SOURCE_TEXT_LENGTH, MAX_TARGET_TEXT_LENGTH
+from model_params import t5_model_params, MAX_SOURCE_TEXT_LENGTH, MAX_TARGET_TEXT_LENGTH
 from wt_dataset import WorldTreeDataset
 from torch.utils.data import DataLoader
 
 ############################################
 # todo: change checkpoint and file paths if needed
 #############################################
-OUTPUT_FILE_PATH = "./evaluation/predictions_vs_actuals-T5-from-hypothesis-with-data-splitting.csv"
+MODE = "bart"
+OUTPUT_FILE_PATH = "evaluation/T5-Hypo-proper-data-splitting/validation_predictions_vs_actuals-T5-from-hypothesis-with-data-splitting.csv"
 MODEL_CHECKPOINT_DIR_PATH = "./outputs/checkpoints/T5-FromHypothesis-with-proper-data-splitting"
-TEST_DATA_PATH = "./data/v2-proper-data/test_data.csv"
+TEST_DATA_PATH = "./data/v2-proper-data/dev_data.csv"
 source_text = "question_and_answer"
 target_text = "explanation"
 ##############################################
 
 if __name__ == "__main__":
-    tokenizer = T5Tokenizer.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
+    if MODE == "bart":
+        print("---- Using BART ----")
+        tokenizer = BartTokenizer.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
+    else:
+        print("---- Using T5 ----")
+        tokenizer = T5Tokenizer.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
 
     df_test = pd.read_csv(TEST_DATA_PATH, delimiter="\t")
 
     testing_dataset = WorldTreeDataset(
         dataframe=df_test[[source_text, target_text]],
         tokenizer=tokenizer,
-        target_len=model_params[MAX_TARGET_TEXT_LENGTH],
-        source_len=model_params[MAX_SOURCE_TEXT_LENGTH],
+        target_len=t5_model_params[MAX_TARGET_TEXT_LENGTH],
+        source_len=t5_model_params[MAX_SOURCE_TEXT_LENGTH],
         target_text_column_name=target_text,
         source_text_column_name=source_text
     )
@@ -39,7 +45,10 @@ if __name__ == "__main__":
     predictions = []
     actuals = []
 
-    model = T5ForConditionalGeneration.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
+    if MODE == "bart":
+        model = BartForConditionalGeneration.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
+    else:
+        model = T5ForConditionalGeneration.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = model.to(device)
     model.eval()
@@ -49,14 +58,15 @@ if __name__ == "__main__":
             source_mask = data["source_mask"].to(device, dtype=torch.long)
             target_ids = data["target_ids"].to(device, dtype=torch.long)
 
+
             generated_ids = model.generate(
                 input_ids=source_ids,
                 attention_mask=source_mask,
-                max_length=model_params[MAX_TARGET_TEXT_LENGTH],
-                num_beams=2,  # todo: how come?
-                repetition_penalty=2.5,
-                length_penalty=1.0,
-                early_stopping=True
+                max_length=t5_model_params[MAX_TARGET_TEXT_LENGTH],
+                num_beams=2,
+                repetition_penalty=2.5, # todo: theta 1.2 with greedy reported to have worked well based on paper
+                length_penalty=1.0, # todo: this greater than 1 encourages model to generate longer sentences and vice versa
+                early_stopping=True # stop beam search once at least num_beams sentences are finished per batch
             )
 
             predicted_explanations = [tokenizer.decode(generated_id, skip_special_tokens=True, cleanup_tokenization_spaces=True)
