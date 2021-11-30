@@ -86,18 +86,11 @@ def bart_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: st
     #     lr=model_params[LEARNING_RATE]
     # )
 
-    optimizer = Adafactor(
+    optimizer = AdamW(
         model.parameters(),
-        lr=1e-3,
-        eps=(1e-30, 1e-3),
-        clip_threshold=1.0,
-        decay_rate=-0.8,
-        beta1=None,
-        weight_decay=0.0,
-        relative_step=False,
-        scale_parameter=False,
-        warmup_init=False
+        lr=3e-5,
     )
+
     training_logger = Table(
         Column("Epoch", justify="center"),
         Column("Steps", justify="center"),

@@ -16,13 +16,27 @@ def train(epoch, tokenizer, model, device, loader, optimizer, logger):
         ids = data["source_ids"].to(device, dtype=torch.long)
         mask = data["source_mask"].to(device, dtype=torch.long)
 
+
         # todo: difference between lm_labels and y_ids
         outputs = model(
-            input_ids=ids,
-            attention_mask=mask,
+            input_ids=ids,  # ok
+            attention_mask=mask,    # ok
             decoder_input_ids=y_ids, # todo this is not needed according to the documentation
             labels=lm_labels
         )
+
+        # ids = data["source_ids"].to(device, dtype=torch.long)
+        # mask = data["source_mask"].to(device, dtype=torch.long)
+        # y = data["target_ids"].to(device, dtype=torch.long)
+        # labels = y[:, 1:].clone().detach()
+        # labels[y[:,1] == tokenizer.pad_token_id] = -100
+
+        # outputs = model(
+        #     input_ids=ids,
+        #     attention_mask=mask,
+        #     labels=labels
+        # )
+
         # FA: this is cross entropy loss between predicted and golden output
         loss = outputs[0]
 
