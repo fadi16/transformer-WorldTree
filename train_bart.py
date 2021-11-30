@@ -12,7 +12,7 @@ import numpy as np
 from transformers import BartTokenizer, BartForConditionalGeneration
 from wt_dataset import WorldTreeDataset
 from torch.utils.data import DataLoader
-from transformers.optimization import AdamW
+from transformers.optimization import AdamW, Adafactor
 from datasets import load_metric
 from train import train
 from validate import validate
@@ -31,10 +31,10 @@ def bart_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: st
 
     print("LOADING MODEL ...\n")
 
-    # T5 tokenizer
+    # BART tokenizer
     tokenizer = BartTokenizer.from_pretrained(model_params[MODEL])
 
-    # T5 model for conditional generation
+    # BART model for conditional generation
     model = BartForConditionalGeneration.from_pretrained(model_params[MODEL])
 
     # send to GPU/TPU
@@ -81,11 +81,23 @@ def bart_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: st
 
     # todo: what about test set?
 
-    optimizer = AdamW(
-        params=model.parameters(),
-        lr=model_params[LEARNING_RATE]
-    )
+    # optimizer = AdamW(
+    #     params=model.parameters(),
+    #     lr=model_params[LEARNING_RATE]
+    # )
 
+    optimizer = Adafactor(
+        model.parameters(),
+        lr=1e-3,
+        eps=(1e-30, 1e-3),
+        clip_threshold=1.0,
+        decay_rate=-0.8,
+        beta1=None,
+        weight_decay=0.0,
+        relative_step=False,
+        scale_parameter=False,
+        warmup_init=False
+    )
     training_logger = Table(
         Column("Epoch", justify="center"),
         Column("Steps", justify="center"),
@@ -119,7 +131,9 @@ def bart_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: st
                                             device=device,
                                             model_params=model_params)
             print("Predictions vs Actuals")
-            print(predictions, actuals)
+            for i in range(len(predictions)):
+                print("Prediction = ",predictions[i])
+                print("Actual = ", actuals[i])
 
             metric.add_batch(predictions=predictions,
                              references=actuals)

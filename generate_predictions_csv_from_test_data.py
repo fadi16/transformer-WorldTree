@@ -4,7 +4,8 @@ import pandas as pd
 from model_params import t5_model_params, MAX_SOURCE_TEXT_LENGTH, MAX_TARGET_TEXT_LENGTH
 from wt_dataset import WorldTreeDataset
 from torch.utils.data import DataLoader
-
+###########################################
+#TODO: WHY USE THE DIRECT CLASSES, CAN I USE THE GENERIC ONE SO THAT I WOULDN'T NEED A MODE
 ############################################
 # todo: change checkpoint and file paths if needed
 #############################################
@@ -49,6 +50,7 @@ if __name__ == "__main__":
         model = BartForConditionalGeneration.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
     else:
         model = T5ForConditionalGeneration.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = model.to(device)
     model.eval()

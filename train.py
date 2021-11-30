@@ -23,7 +23,7 @@ def train(epoch, tokenizer, model, device, loader, optimizer, logger):
             decoder_input_ids=y_ids, # todo this is not needed according to the documentation
             labels=lm_labels
         )
-
+        # FA: this is cross entropy loss between predicted and golden output
         loss = outputs[0]
 
         if _ % 100 == 0:
