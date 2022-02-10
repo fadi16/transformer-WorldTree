@@ -6,7 +6,7 @@ from rich import box
 from rich.table import Table, Column
 
 from model_params import MAX_TARGET_TEXT_LENGTH, SEED, MAX_SOURCE_TEXT_LENGTH, MODEL, TRAIN_BATCH_SIZE, \
-    VALID_BATCH_SIZE, TRAIN_EPOCHS, VAL_EPOCHS, LEARNING_RATE
+    VALID_BATCH_SIZE, TRAIN_EPOCHS, VAL_EPOCHS
 import torch
 import numpy as np
 from transformers import BartTokenizer, BartForConditionalGeneration

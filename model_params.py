@@ -27,7 +27,7 @@ bart_model_params = {
     "VALID_BATCH_SIZE": 4,
     "TRAIN_EPOCHS": 10,
     "VAL_EPOCHS": 1,
-    "LEARNING_RATE": 1e-3,
+    "LEARNING_RATE": 3e-5,
     "MAX_SOURCE_TEXT_LENGTH": 256,
     "MAX_TARGET_TEXT_LENGTH": 256,
     "SEED": 42

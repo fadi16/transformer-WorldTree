@@ -1,4 +1,6 @@
 import sys
+import heapq
+from typing import List
 
 import nltk
 import pandas as pd
@@ -6,12 +8,13 @@ import numpy as np
 from datasets import load_metric
 import matplotlib.pyplot as plt
 from nltk.corpus import stopwords
+
 ###############################################
 ## todo: change file path
 ###############################################
-from datasets.packaged_modules.csv.csv import Csv
+DEV_PREDICTIONS_CSV_PATH = "evaluation/t-cvae-1/test_predictions_vs_actuals.csv" #"evaluation/T5/validation_predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-T5-from-hypothesis-with-data-splitting.csv"
+TRAINING_DATA_CSV_PATH = "data/v2-proper-data/train_data.csv"
 
-DEV_PREDICTIONS_CSV_PATH = "evaluation/T5-QnA-proper-data-splitting/predictions_vs_actuals-T5-from-QnA-with-data-splitting_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-T5-from-hypothesis-with-data-splitting.csv"
 num_of_best_worst_explanations = 15
 STOP_WORDS = stopwords.words("english")
 ###############################################
@@ -172,15 +175,15 @@ def no_generated_facts_vs_no_facts_in_ref_and_no_repeated_facts(references_with_
         reference_facts[:] = [ref_fact.strip() for ref_fact in reference_facts]
         reference_facts_bows = [set(
             word.strip() for word in ref_fact.split() if word not in STOP_WORDS and word != "" and not word.isspace())
-                                for ref_fact in
-                                reference_facts]
+            for ref_fact in
+            reference_facts]
 
         generated_facts = generated_with_separator[i].lower().replace(";", " ").split("$$")
         generated_facts[:] = [gen_fact.strip() for gen_fact in generated_facts]
         generated_facts_bows = [set(
             word.strip() for word in gen_fact.split() if word not in STOP_WORDS and word != "" and not word.isspace())
-                                for gen_fact in
-                                generated_facts]
+            for gen_fact in
+            generated_facts]
 
         # calculate number of repeated generated facts
         unique_gen_facts_bows = []
@@ -229,9 +232,10 @@ def no_generated_facts_vs_no_facts_in_ref_and_no_repeated_facts(references_with_
     return no_gen_facts_to_stats
 
 
+# the higher the score the more similar s1 and s2
 def jaccard_similarity(s1, s2):
     """
-    J(A, B) = |A union B| / (|A| + |B| - |A intersection B|)
+    J(A, B) = |A intersection B| / (|A| + |B| - |A intersection B|)
     """
     s1 = s1.replace(";", " ").replace(".", " ")
     s2 = s2.replace(";", " ").replace(".", " ")
@@ -241,37 +245,114 @@ def jaccard_similarity(s1, s2):
 
     s1_bow_inter_s2_bow = s1_bow.intersection(s2_bow)
     score = len(s1_bow_inter_s2_bow) / (len(s1_bow) + len(s2_bow) - len(s1_bow_inter_s2_bow))
-    return (1 - score) * 100
+    return score * 100
 
 
-def levenshtein_distance(s1, s2):
-    return nltk.edit_distance(s1, s2)
-
-
-def similarity_score_for_QnA_and_reference_vs_BLEURT_score(questions_and_answers, references, scores):
+def similarity_score_for_QnA_and_reference_vs_BLEURT_score_of_generated_explanation(questions_and_answers, references, scores,
+                                                                                    similarity_measure, similarity_step):
     assert len(questions_and_answers) == len(references) == len(scores)
-    similarity_to_score = {}
-    for i in range(len(questions_and_answers)):
-        similarity = jaccard_similarity(questions_and_answers[i], references[i])
-        if similarity in similarity_to_score:
-            similarity_to_score[similarity].append(scores[i])
-        else:
-            similarity_to_score[similarity] = [scores[i]]
+    mean_score = np.mean(scores)
 
-    similarities = sorted(list(similarity_to_score.keys()))
+    similarity_to_score = {}
+    similarities_to_show = np.array([i for i in range(0,100,similarity_step)])
+    for similarity_to_show in similarities_to_show:
+        similarity_to_score[similarity_to_show] = []
+
+    for i in range(len(questions_and_answers)):
+        similarity = similarity_measure(questions_and_answers[i], references[i])
+
+        similarity_diff = abs(similarity - similarities_to_show)
+        closest_similarity_index = np.argmin(similarity_diff)
+        closest_similarity = similarities_to_show[closest_similarity_index]
+
+        similarity_to_score[closest_similarity].append(scores[i])
+
+    # remove similarities that have no scores associated to them
+    similarities = sorted(sim for sim in similarity_to_score.keys() if similarity_to_score[sim] != [])
     scores = [np.mean(similarity_to_score[s]) for s in similarities]
+    figure = get_figure()
+
+    plt.plot(similarities, scores, marker="o", linestyle="dashed", label="bluert score of generated senteneces")
+    plt.plot(similarities, [mean_score for _ in similarities], label="mean bluert score")
+    plt.title("Similarity Score Between Q/A and Golden Reference vs BLEURT Score of Generated Sentence")
+    plt.xlabel("similarity between Q/A and golden reference - " + str(similarity_measure.__name__) + ", with similarity_step = " + str(similarity_step))
+    plt.ylabel("bleurt score of generated sentence")
+    plt.legend(loc="upper left")
+    figure.show()
+
+
+def average_similarity_of_each_test_QnA_to_n_closest_QnAs_in_training_set_vs_no_test_samples_with_this_score(qna_testing_set, qna_training_set,
+                                                                                                             ns: List[int], similarity_measure):
+    # a map between an average similarity between a test QnA and the QnAs from the training set, and the number of those test QnAs with that average similarity
+    average_similarity_with_n_closest_samples_to_no_of_sentences_with_that_similarity = {}
+    for test_qna in qna_testing_set:
+        current_qna_similarity_scores = []
+        for train_qna in qna_training_set:
+            current_qna_similarity_scores.append(similarity_measure(test_qna, train_qna))
+
+        for n in ns:
+
+            if n not in average_similarity_with_n_closest_samples_to_no_of_sentences_with_that_similarity:
+                average_similarity_with_n_closest_samples_to_no_of_sentences_with_that_similarity[n] = {}
+
+            # get n best scores
+            n_most_similar = heapq.nlargest(n, current_qna_similarity_scores)
+            average_similarity = int(np.mean(n_most_similar))
+
+            if average_similarity in average_similarity_with_n_closest_samples_to_no_of_sentences_with_that_similarity[n]:
+                average_similarity_with_n_closest_samples_to_no_of_sentences_with_that_similarity[n][average_similarity] += 1
+            else:
+                average_similarity_with_n_closest_samples_to_no_of_sentences_with_that_similarity[n][average_similarity] = 1
+
+    for n in ns:
+        figure = get_figure()
+
+        average_similarities = sorted(
+            list(average_similarity_with_n_closest_samples_to_no_of_sentences_with_that_similarity[n].keys()))
+        counts = [average_similarity_with_n_closest_samples_to_no_of_sentences_with_that_similarity[n][avr_sim] for
+                  avr_sim in average_similarities]
+
+        plt.plot(average_similarities, counts, marker="o", markersize=5, linestyle="dashed", label="n = {0}".format(n))
+
+        plt.legend(loc="upper left")
+        plt.title(
+            "Average Similarity Score Between Test QnA And 'n' Closest Training QnAs vs No. of Test QnAs Having That Score".format(
+                str(n)))
+        plt.xlabel("average similarity between test QnA and 'n' closest training QnAs - " + str(
+            similarity_measure.__name__) + " / more means more similar")
+        plt.ylabel("number of test QnAs")
+        figure.show()
+
+
+def average_similarity_between_test_and_train_samples_vs_bluert_score(qna_testing_set, qna_training_set, scores, n, similarity_measure, similarity_step):
+    mean_score = np.mean(scores)
+    average_similarities_to_bleu_scores = {}
+    similarities_to_show = np.array([i for i in range(0,100,similarity_step)])
+    for similarity_to_show in similarities_to_show:
+        average_similarities_to_bleu_scores[similarity_to_show] = []
+
+    for i in range(len(qna_testing_set)):
+        similarities = []
+        for training_qna in qna_training_set:
+            similarities.append(similarity_measure(qna_testing_set[i], training_qna))
+        average_n_most_similar = np.mean(heapq.nlargest(n, similarities))
+
+        similarity_diff = abs(average_n_most_similar - similarities_to_show)
+        closest_similarity_index = np.argmin(similarity_diff)
+        closest_similarity = similarities_to_show[closest_similarity_index]
+        average_similarities_to_bleu_scores[closest_similarity].append(scores[i])
 
     figure = get_figure()
 
-    mean_score = np.mean(scores)
-
-    plt.plot(similarities, scores, marker="o", markersize=2, linestyle="solid")
-    plt.plot(similarities, [mean_score for _ in similarities])
-    plt.title("Similarity Score Between Q/A and Golden Reference vs BLEURT Score of Generated Sentence")
-    plt.xlabel("similarity between Q/A and golden reference - levenshtein distance")
-    plt.ylabel("bleurt score of generated sentence")
+    similarity_scores = sorted(sim for sim in average_similarities_to_bleu_scores.keys() if average_similarities_to_bleu_scores[sim] != [])
+    bluert_scores = [np.mean(average_similarities_to_bleu_scores[similarity_score]) for similarity_score in similarity_scores]
+    plt.plot(similarity_scores, bluert_scores, marker="o", markersize=5, linestyle="solid", label="n = {0}, similarity_step = {1}".format(str(n), str(similarity_step)))
+    plt.plot(similarity_scores, [mean_score for _ in similarity_scores], label="mean bluert score")
+    plt.title("Average Similarity Between Test QnA and 'n' most similat Training QnAs vs BLEURT Score of Generated Explanation for that test QnA")
+    plt.xlabel("average similarity between test Q/A and 'n' most similar Training QnAs - " + similarity_measure.__name__)
+    plt.ylabel("(average) bleurt score of generated sentence")
+    plt.legend(loc="upper left")
     figure.show()
-
 
 if __name__ == "__main__":
     df_predictions = pd.read_csv(DEV_PREDICTIONS_CSV_PATH, delimiter=",")
@@ -300,12 +381,48 @@ if __name__ == "__main__":
         no_explanations_reference.append(x.count("$$") + 1)
         reference_text.append(x.replace("$$", "."))
 
-    similarity_score_for_QnA_and_reference_vs_BLEURT_score(questions_and_answers=df_predictions["Questions"],
-                                                           references=reference_text,
-                                                           scores=df_predictions[BLERT_SCORES])
+    # no_hops_in_reference_vs_score(no_hops_reference=no_explanations_reference,
+    #                               scores=df_predictions[BLERT_SCORES])
+    #
+    # similarity_score_for_QnA_and_reference_vs_BLEURT_score_of_generated_explanation(
+    #     questions_and_answers=df_predictions["Questions"],
+    #     scores=df_predictions[BLERT_SCORES],
+    #     references=df_predictions["Actual Text"],
+    #     similarity_measure=jaccard_similarity,
+    #     similarity_step=10
+    # )
 
-    show_plots()
-    sys.exit()
+    #
+    # average_similarity_between_test_and_train_samples_vs_bluert_score(
+    #     qna_testing_set=df_predictions["Questions"],
+    #     qna_training_set=pd.read_csv(TRAINING_DATA_CSV_PATH, "\t")["question_and_answer"],
+    #     similarity_measure=jaccard_similarity,
+    #     scores=df_predictions[BLERT_SCORES],
+    #     n=3,
+    #     similarity_step=10
+    # )
+
+    # show_plots()
+    # sys.exit()
+
+    # average_similarity_between_test_and_train_samples_vs_bluert_score(
+    #     qna_testing_set=df_predictions["Questions"],
+    #     qna_training_set=pd.read_csv(TRAINING_DATA_CSV_PATH, "\t")["question_and_answer"],
+    #     similarity_measure=jaccard_similarity,
+    #     scores=df_predictions[BLERT_SCORES],
+    #     n=1
+    # )
+    # show_plots()
+    # sys.exit()
+
+    # average_similarity_of_each_test_QnA_to_n_closest_QnAs_in_training_set_vs_no_test_samples_with_this_score(
+    #     qna_testing_set=df_predictions["Questions"],
+    #     qna_training_set=pd.read_csv(TRAINING_DATA_CSV_PATH, "\t")["question_and_answer"],
+    #     similarity_measure=jaccard_similarity,
+    #     ns=[1, 3, 100]
+    # )
+    # show_plots()
+    # sys.exit()
 
     # if predictions csv does not contain scores, add them                                                                                                        "."))
     try:
@@ -320,12 +437,12 @@ if __name__ == "__main__":
         df_predictions["bleurt_scores"] = bleurt_scores
         df_predictions.to_csv(DEV_PREDICTIONS_CSV_PATH.replace(".csv", "_with_BLEURT_scores.csv"))
 
-    no_hops_in_reference_vs_score(no_hops_reference=no_explanations_reference,
-                                  scores=bleurt_scores)
-    no_explanations_in_reference_vs_no_explanations_in_generated(no_explanations_reference=no_explanations_reference,
-                                                                 no_explanations_generated=no_explanations_generated)
+    # no_hops_in_reference_vs_score(no_hops_reference=no_explanations_reference,
+    #                               scores=bleurt_scores)
+    # no_explanations_in_reference_vs_no_explanations_in_generated(no_explanations_reference=no_explanations_reference,
+    #                                                              no_explanations_generated=no_explanations_generated)
+    #
+    # no_words_in_question_vs_score(questions=df_predictions["Questions"],
+    #                               scores=bleurt_scores)
 
-    no_words_in_question_vs_score(questions=df_predictions["Questions"],
-                                  scores=bleurt_scores)
-
-    show_plots()
+    #show_plots()

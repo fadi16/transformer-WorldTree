@@ -9,9 +9,9 @@ from torch.utils.data import DataLoader
 ############################################
 # todo: change checkpoint and file paths if needed
 #############################################
-MODE = "bart"
-OUTPUT_FILE_PATH = "evaluation/T5-Hypo-proper-data-splitting/validation_predictions_vs_actuals-T5-from-hypothesis-with-data-splitting.csv"
-MODEL_CHECKPOINT_DIR_PATH = "./outputs/checkpoints/T5-FromHypothesis-with-proper-data-splitting"
+MODE = "t5"
+OUTPUT_FILE_PATH = "evaluation/T5/validation_predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv"
+MODEL_CHECKPOINT_DIR_PATH = "./outputs/checkpoints/T5-FromQnA-with-proper-data-splitting"
 TEST_DATA_PATH = "./data/v2-proper-data/dev_data.csv"
 source_text = "question_and_answer"
 target_text = "explanation"
