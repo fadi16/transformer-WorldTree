@@ -22,14 +22,14 @@ if __name__ == "__main__":
                                                                        no_retrieved_facts=t5_model_params[
                                                                            NO_FACTS_TO_RETRIEVE])
         for i in range(len(train_retrieved_facts)):
-            df_train["question_and_answer"][i] += " @@ " + train_retrieved_facts[i]
+            df_train[t5_model_params[TRAIN_ON]][i] += " @@ " + train_retrieved_facts[i]
         for i in range(len(dev_retrieved_facts)):
-            df_dev["question_and_answer"][i] += " @@ " + dev_retrieved_facts[i]
+            df_dev[t5_model_params[TRAIN_ON]][i] += " @@ " + dev_retrieved_facts[i]
 
     t5_trainer(
         train_set=df_train,
         dev_set=df_dev,
-        source_text="question_and_answer",
+        source_text=t5_model_params[TRAIN_ON],
         target_text="explanation",
         model_params=t5_model_params,
         output_dir="./outputs",
