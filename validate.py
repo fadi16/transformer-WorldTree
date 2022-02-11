@@ -34,12 +34,14 @@ def validate(epoch, tokenizer, model, device, loader, model_params):
 
             predicted_explanations = [tokenizer.decode(generated_id, skip_special_tokens=True, cleanup_tokenization_spaces=True) for generated_id in generated_ids]
             actual_explanations = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True) for id in target_ids]
-
+            inputs = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True) for id in source_ids]
             if _ % 10 == 0:
-                print("-------------------------------------------------")
-                print("SHOWING EXAMPLE:")
-                print("predicted_explanations", predicted_explanations)
-                print("actual_explanations", actual_explanations)
+                for i in range(len(inputs)):
+                    print("-------------------------------------------------")
+                    print("SHOWING EXAMPLE:")
+                    print("input:", inputs)
+                    print("predicted_explanations:", predicted_explanations)
+                    print("actual_explanations:", actual_explanations)
             predictions.extend(predicted_explanations)
             actuals.extend(actual_explanations)
 
