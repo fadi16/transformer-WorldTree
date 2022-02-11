@@ -29,7 +29,7 @@ if __name__ == "__main__":
     t5_trainer(
         train_set=df_train,
         dev_set=df_dev,
-        source_text="hypothesis",
+        source_text="question_and_answer",
         target_text="explanation",
         model_params=t5_model_params,
         output_dir="./outputs",
