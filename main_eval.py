@@ -12,7 +12,7 @@ from nltk.corpus import stopwords
 ###############################################
 ## todo: change file path
 ###############################################
-DEV_PREDICTIONS_CSV_PATH = "evaluation/t-cvae-1/test_predictions_vs_actuals.csv" #"evaluation/T5/validation_predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-T5-from-hypothesis-with-data-splitting.csv"
+DEV_PREDICTIONS_CSV_PATH = "evaluation/t-cvae-1/test_predictions_vs_actuals_with_BLEURT_scores.csv" #"evaluation/T5/validation_predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-T5-from-hypothesis-with-data-splitting.csv"
 TRAINING_DATA_CSV_PATH = "data/v2-proper-data/train_data.csv"
 
 num_of_best_worst_explanations = 15
@@ -161,8 +161,9 @@ def evaluate(metric_key: str, questions, references, generated):
 
     return scores, scores_mean, best_explanations_df, worst_explanations_df
 
-
+# 2 facts are the same if their BOWs without stopwords are the same
 def no_generated_facts_vs_no_facts_in_ref_and_no_repeated_facts(references_with_seperator, generated_with_separator):
+    # repeated facts are only counted once
     NO_FACTS_OCCURRING_IN_REF = "no_facts_occurring_in_reference"
     NO_REPEATED_FACTS = "no_repeated_facts"
     MEAN_NO_FACTS_OCCURRING_IN_REF = "mean_no_facts_occurring_in_reference"
@@ -365,13 +366,16 @@ if __name__ == "__main__":
     reference_text_with_separator = []
     generated_text_with_separator = []
 
+    questions_and_answers = []
     # with separator
     for x in df_predictions["Generated Text"]:
         generated_text_with_separator.append(
-            x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", ""))
+            x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", "").replace("<|endoftext|>", ""))
     for x in df_predictions["Actual Text"]:
         reference_text_with_separator.append(
-            x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", ""))
+            x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", "").replace("<|endoftext|>", ""))
+    for x in df_predictions["Questions"]:
+        questions_and_answers.append(x.replace("<|endoftext|>", ""))
 
     # without separator
     for x in generated_text_with_separator:
@@ -381,29 +385,29 @@ if __name__ == "__main__":
         no_explanations_reference.append(x.count("$$") + 1)
         reference_text.append(x.replace("$$", "."))
 
-    # no_hops_in_reference_vs_score(no_hops_reference=no_explanations_reference,
-    #                               scores=df_predictions[BLERT_SCORES])
-    #
+    # no_generated_facts_vs_no_facts_in_ref_and_no_repeated_facts(references_with_seperator=reference_text_with_separator,
+    #                                                             generated_with_separator=generated_text_with_separator)
+
     # similarity_score_for_QnA_and_reference_vs_BLEURT_score_of_generated_explanation(
-    #     questions_and_answers=df_predictions["Questions"],
+    #     questions_and_answers=questions_and_answers,
     #     scores=df_predictions[BLERT_SCORES],
-    #     references=df_predictions["Actual Text"],
+    #     references=reference_text,
     #     similarity_measure=jaccard_similarity,
     #     similarity_step=10
     # )
 
     #
-    # average_similarity_between_test_and_train_samples_vs_bluert_score(
-    #     qna_testing_set=df_predictions["Questions"],
-    #     qna_training_set=pd.read_csv(TRAINING_DATA_CSV_PATH, "\t")["question_and_answer"],
-    #     similarity_measure=jaccard_similarity,
-    #     scores=df_predictions[BLERT_SCORES],
-    #     n=3,
-    #     similarity_step=10
-    # )
+    average_similarity_between_test_and_train_samples_vs_bluert_score(
+        qna_testing_set=questions_and_answers,
+        qna_training_set=pd.read_csv(TRAINING_DATA_CSV_PATH, "\t")["question_and_answer"],
+        similarity_measure=jaccard_similarity,
+        scores=df_predictions[BLERT_SCORES],
+        n=3,
+        similarity_step=10
+    )
 
-    # show_plots()
-    # sys.exit()
+    show_plots()
+    sys.exit()
 
     # average_similarity_between_test_and_train_samples_vs_bluert_score(
     #     qna_testing_set=df_predictions["Questions"],
@@ -441,8 +445,8 @@ if __name__ == "__main__":
     #                               scores=bleurt_scores)
     # no_explanations_in_reference_vs_no_explanations_in_generated(no_explanations_reference=no_explanations_reference,
     #                                                              no_explanations_generated=no_explanations_generated)
-    #
+
     # no_words_in_question_vs_score(questions=df_predictions["Questions"],
     #                               scores=bleurt_scores)
 
-    #show_plots()
+    show_plots()

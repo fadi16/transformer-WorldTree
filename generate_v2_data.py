@@ -126,8 +126,8 @@ def construct_data_table(data_json, hypotheses_json):
             questions_missing_hypothesis.append(question_id)
         fact_ids_list = list(question_data["explanation"].keys())
         explanations_list, explanations_types_list = get_explanations_and_explanations_types_list(fact_ids_list)
-        explanations = "$$ ".join(explanations_list)
-        explanations_types = "$$ ".join(explanations_types_list)
+        explanations = " $$ ".join(explanations_list)
+        explanations_types = " $$ ".join(explanations_types_list)
         data_table.append(
             [
                 question_id,
@@ -154,6 +154,7 @@ if __name__ == "__main__":
     dev_table, questions_misssing_hypo = construct_data_table("./data/v2-proper-data/dev_set_shared.json",
                                                               "./data/v2-proper-data/hypothesis_dev_v2.json")
     reduced_dev_table = dev_table[:-200]
+
     df = pd.DataFrame(data=reduced_dev_table, columns=columns)
     df.to_csv("./data/v2-proper-data/dev_data_wed.csv", sep="\t")
 
@@ -164,14 +165,6 @@ if __name__ == "__main__":
     df.to_csv("./data/v2-proper-data/train_data_wed.csv", sep="\t")
 
     # testing data
-    test_table = dev_table[:200]
+    test_table = dev_table[-200:]
     df = pd.DataFrame(data=test_table, columns=columns)
     df.to_csv("./data/v2-proper-data/test_data_wed.csv", sep="\t")
-
-    # # map question and answer to topic
-    # question_and_answer_to_topic = {}
-    # for i in range(len(test_table)):
-    #     question_and_answer_to_topic[test_table[i]["question_and_answer"]] = test_table[i]["major_question_topic"]
-    #
-    # with open('filename.pickle', 'wb') as handle:
-    #     pickle.dump(a, handle, protocol=pickle.HIGHEST_PROTOCOL)

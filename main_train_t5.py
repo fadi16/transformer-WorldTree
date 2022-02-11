@@ -3,8 +3,8 @@ from train_t5 import t5_trainer
 from model_params import t5_model_params
 
 if __name__ == "__main__":
-    path_train = "./data/v2-proper-data/train_data.csv"
-    path_dev = "./data/v2-proper-data/dev_data.csv"
+    path_train = "./data/v2-proper-data/train_data_wed_with_retrieved_exps.csv"
+    path_dev = "./data/v2-proper-data/dev_data_wed_with_retrieved_exps.csv"
 
 
     df_train = pd.read_csv(path_train, delimiter="\t")
