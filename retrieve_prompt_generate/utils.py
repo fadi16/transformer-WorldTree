@@ -1,7 +1,7 @@
 import nltk
 
 from nltk.corpus import stopwords
-
+nltk.download('punkt')
 class Utils:
     def init_explanation_bank_lemmatizer(self):
         lemmatization_file = open("./retrieve_prompt_generate/lemmatization-en.txt")

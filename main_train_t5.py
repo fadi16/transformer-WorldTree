@@ -14,6 +14,7 @@ if __name__ == "__main__":
     print(df_dev.head())
 
     if t5_model_params[AUGMENT_INPUT_WITH_RETRIEVED_FACTS]:
+        print("USING RETRIEVAL METHOD")
         train_retrieved_facts, dev_retrieved_facts = retrieve.retrieve(training_df=df_train,
                                                                        testing_df=df_dev,
                                                                        no_similar_hypotheses=t5_model_params[
