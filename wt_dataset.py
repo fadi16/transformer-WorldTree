@@ -25,9 +25,6 @@ class WorldTreeDataset(Dataset):
         self.source_len = source_len
         self.target_len = target_len
         self.source_text = self.data[source_text_column_name]
-        if source_augmented_text_column_name:
-            for i in range(len(self.source_text)):
-                self.source_text[i] += " <EOQ> " + self.data[source_augmented_text_column_name][i]
         longest_source_sequence = len(max(self.source_text, key=lambda x: len(x.split())).split())
         print("longest_source_sequence = ", longest_source_sequence)
         self.target_text = self.data[target_text_column_name]
@@ -84,8 +81,8 @@ class WorldTreeDataset(Dataset):
 
 if __name__ == "__main__":
     pass
-    # dev_data_path = "data/v2-proper-data/dev_data_wed_with_retrieved_exps.csv"
-    # df_dev = pd.read_csv(dev_data_path, sep="\t")
+    # dev_data_path = "data/v2-proper-data/train_data_wed_with_retrieved_exps.csv"
+    # df_dev = pd.read_csv(dev_data_path, delimiter="\t")
     # #print(df_dev.keys())
     #
     # print(df_dev.columns.tolist())
