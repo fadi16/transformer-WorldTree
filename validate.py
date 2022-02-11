@@ -39,9 +39,9 @@ def validate(epoch, tokenizer, model, device, loader, model_params):
                 for i in range(len(inputs)):
                     print("-------------------------------------------------")
                     print("SHOWING EXAMPLE:")
-                    print("input:", inputs)
-                    print("predicted_explanations:", predicted_explanations)
-                    print("actual_explanations:", actual_explanations)
+                    print("input:", inputs[i])
+                    print("predicted_explanations:", predicted_explanations[i])
+                    print("actual_explanations:", actual_explanations[i])
             predictions.extend(predicted_explanations)
             actuals.extend(actual_explanations)
 
