@@ -145,7 +145,6 @@ def t5_trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str,
                 final_df.to_csv(os.path.join(output_dir, "predictions.csv"))
                 print("SAVED PREDICTIONS AT " + os.path.join(output_dir, "predictions.csv") + "\n")
                 # save model and tokenizer
-                # todo why save tokenizer?
                 model_checkpoint_path = os.path.join(output_dir, "checkpoints")
                 model.save_pretrained(model_checkpoint_path)
                 tokenizer.save_pretrained(model_checkpoint_path)

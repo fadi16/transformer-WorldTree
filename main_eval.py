@@ -8,12 +8,15 @@ import numpy as np
 from datasets import load_metric
 import matplotlib.pyplot as plt
 from nltk.corpus import stopwords
+from nltk.stem.porter import PorterStemmer
 
 ###############################################
 ## todo: change file path
 ###############################################
-DEV_PREDICTIONS_CSV_PATH = "evaluation/t-cvae-1/test_predictions_vs_actuals_with_BLEURT_scores.csv" #"evaluation/T5/validation_predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-T5-from-hypothesis-with-data-splitting.csv"
-TRAINING_DATA_CSV_PATH = "data/v2-proper-data/train_data.csv"
+#DEV_PREDICTIONS_CSV_PATH = "evaluation/t5-retrieve-prompt/predictions_with_BLEURT_scores.csv"  # "evaluation/T5/validation_predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-T5-from-hypothesis-with-data-splitting.csv"
+DEV_PREDICTIONS_CSV_PATH = "evaluation/T5/validation_predictions_vs_actuals-T5-from-QnA-with-data-splitting_with_BLEURT_scores.csv"  # "evaluation/T5/validation_predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-T5-from-hypothesis-with-data-splitting.csv"
+
+TRAINING_DATA_CSV_PATH = "data/v2-proper-data/train_data_wed.csv"
 
 num_of_best_worst_explanations = 15
 STOP_WORDS = stopwords.words("english")
@@ -21,6 +24,7 @@ STOP_WORDS = stopwords.words("english")
 BLERT_SCORES = "bleurt_scores"
 FIGURE_COUNTER = 0
 
+stemmer = PorterStemmer()
 
 def show_plots():
     plt.show()
@@ -31,6 +35,39 @@ def get_figure():
     f = plt.figure(FIGURE_COUNTER)
     FIGURE_COUNTER += 1
     return f
+
+def pprint_best_worst_results(results):
+    for result in results:
+      i = 0
+      question = result["question"]
+      if "@@" in question:
+          question_and_retrieved_input = question.split("@@")
+          question = question_and_retrieved_input[0]
+          retrieved_facts = question_and_retrieved_input[1].split("££")
+          print("Question: ", question)
+          print("Retrieved facts: ")
+          i = 0
+          for fact in retrieved_facts:
+            print("\t", i, ".\t", fact)
+            i += 1
+      else:
+          print("Question: ", question)
+
+      reference_explanations = result["reference"].split(".")
+      print("Reference Explanations:")
+      i = 0
+      for exp in reference_explanations:
+          print("\t", i, ".\t", exp)
+          i += 1
+
+      print("Generated Explanations:")
+      generated_explanations = result["generated"].split(".")
+      i = 0
+      for exp in generated_explanations:
+          print("\t", i, ".\t", exp)
+          i += 1
+      print("Score:", result["score"])
+      print("=" * 40)
 
 
 def no_hops_in_reference_vs_score(no_hops_reference, scores):
@@ -55,6 +92,7 @@ def no_hops_in_reference_vs_score(no_hops_reference, scores):
     figure.show()
 
 
+# TODO: SMOOTH
 def no_words_in_question_vs_score(questions, scores):
     mean_score = np.mean(scores)
     no_words_in_questions = []
@@ -161,6 +199,12 @@ def evaluate(metric_key: str, questions, references, generated):
 
     return scores, scores_mean, best_explanations_df, worst_explanations_df
 
+
+def get_bow_of_fact(fact):
+    return set(
+            stemmer.stem(word.lower().strip()) for word in fact.split() if word.lower().strip() not in STOP_WORDS and word != "" and not word.isspace()
+    )
+
 # 2 facts are the same if their BOWs without stopwords are the same
 def no_generated_facts_vs_no_facts_in_ref_and_no_repeated_facts(references_with_seperator, generated_with_separator):
     # repeated facts are only counted once
@@ -174,17 +218,11 @@ def no_generated_facts_vs_no_facts_in_ref_and_no_repeated_facts(references_with_
     for i in range(len(references_with_seperator)):
         reference_facts = references_with_seperator[i].lower().replace(";", " ").split("$$")
         reference_facts[:] = [ref_fact.strip() for ref_fact in reference_facts]
-        reference_facts_bows = [set(
-            word.strip() for word in ref_fact.split() if word not in STOP_WORDS and word != "" and not word.isspace())
-            for ref_fact in
-            reference_facts]
+        reference_facts_bows = [get_bow_of_fact(ref_fact) for ref_fact in reference_facts]
 
         generated_facts = generated_with_separator[i].lower().replace(";", " ").split("$$")
         generated_facts[:] = [gen_fact.strip() for gen_fact in generated_facts]
-        generated_facts_bows = [set(
-            word.strip() for word in gen_fact.split() if word not in STOP_WORDS and word != "" and not word.isspace())
-            for gen_fact in
-            generated_facts]
+        generated_facts_bows = [get_bow_of_fact(gen_fact) for gen_fact in generated_facts]
 
         # calculate number of repeated generated facts
         unique_gen_facts_bows = []
@@ -241,21 +279,24 @@ def jaccard_similarity(s1, s2):
     s1 = s1.replace(";", " ").replace(".", " ")
     s2 = s2.replace(";", " ").replace(".", " ")
 
-    s1_bow = set(word.strip() for word in s1.split() if word not in STOP_WORDS and word != "" and not word.isspace())
-    s2_bow = set(word.strip() for word in s2.split() if word not in STOP_WORDS and word != "" and not word.isspace())
+    s1_bow = get_bow_of_fact(s1)
+    s2_bow = get_bow_of_fact(s2)
 
     s1_bow_inter_s2_bow = s1_bow.intersection(s2_bow)
     score = len(s1_bow_inter_s2_bow) / (len(s1_bow) + len(s2_bow) - len(s1_bow_inter_s2_bow))
     return score * 100
 
 
-def similarity_score_for_QnA_and_reference_vs_BLEURT_score_of_generated_explanation(questions_and_answers, references, scores,
-                                                                                    similarity_measure, similarity_step):
+# TODO: need a new way of passing questions_and_answers with retrieval strategy, pass original df before modificaiton
+def similarity_score_for_QnA_and_reference_vs_BLEURT_score_of_generated_explanation(questions_and_answers, references,
+                                                                                    scores,
+                                                                                    similarity_measure,
+                                                                                    similarity_step):
     assert len(questions_and_answers) == len(references) == len(scores)
     mean_score = np.mean(scores)
 
     similarity_to_score = {}
-    similarities_to_show = np.array([i for i in range(0,100,similarity_step)])
+    similarities_to_show = np.array([i for i in range(0, 100, similarity_step)])
     for similarity_to_show in similarities_to_show:
         similarity_to_score[similarity_to_show] = []
 
@@ -276,14 +317,17 @@ def similarity_score_for_QnA_and_reference_vs_BLEURT_score_of_generated_explanat
     plt.plot(similarities, scores, marker="o", linestyle="dashed", label="bluert score of generated senteneces")
     plt.plot(similarities, [mean_score for _ in similarities], label="mean bluert score")
     plt.title("Similarity Score Between Q/A and Golden Reference vs BLEURT Score of Generated Sentence")
-    plt.xlabel("similarity between Q/A and golden reference - " + str(similarity_measure.__name__) + ", with similarity_step = " + str(similarity_step))
+    plt.xlabel("similarity between Q/A and golden reference - " + str(
+        similarity_measure.__name__) + ", with similarity_step = " + str(similarity_step))
     plt.ylabel("bleurt score of generated sentence")
     plt.legend(loc="upper left")
     figure.show()
 
 
-def average_similarity_of_each_test_QnA_to_n_closest_QnAs_in_training_set_vs_no_test_samples_with_this_score(qna_testing_set, qna_training_set,
-                                                                                                             ns: List[int], similarity_measure):
+# todo: better metric for similarity??
+def average_similarity_of_each_test_QnA_to_n_closest_QnAs_in_training_set_vs_no_test_samples_with_this_score(
+        qna_testing_set, qna_training_set,
+        ns: List[int], similarity_measure):
     # a map between an average similarity between a test QnA and the QnAs from the training set, and the number of those test QnAs with that average similarity
     average_similarity_with_n_closest_samples_to_no_of_sentences_with_that_similarity = {}
     for test_qna in qna_testing_set:
@@ -300,10 +344,13 @@ def average_similarity_of_each_test_QnA_to_n_closest_QnAs_in_training_set_vs_no_
             n_most_similar = heapq.nlargest(n, current_qna_similarity_scores)
             average_similarity = int(np.mean(n_most_similar))
 
-            if average_similarity in average_similarity_with_n_closest_samples_to_no_of_sentences_with_that_similarity[n]:
-                average_similarity_with_n_closest_samples_to_no_of_sentences_with_that_similarity[n][average_similarity] += 1
+            if average_similarity in average_similarity_with_n_closest_samples_to_no_of_sentences_with_that_similarity[
+                n]:
+                average_similarity_with_n_closest_samples_to_no_of_sentences_with_that_similarity[n][
+                    average_similarity] += 1
             else:
-                average_similarity_with_n_closest_samples_to_no_of_sentences_with_that_similarity[n][average_similarity] = 1
+                average_similarity_with_n_closest_samples_to_no_of_sentences_with_that_similarity[n][
+                    average_similarity] = 1
 
     for n in ns:
         figure = get_figure()
@@ -325,10 +372,11 @@ def average_similarity_of_each_test_QnA_to_n_closest_QnAs_in_training_set_vs_no_
         figure.show()
 
 
-def average_similarity_between_test_and_train_samples_vs_bluert_score(qna_testing_set, qna_training_set, scores, n, similarity_measure, similarity_step):
+def average_similarity_between_test_and_train_samples_vs_bluert_score(qna_testing_set, qna_training_set, scores, n,
+                                                                      similarity_measure, similarity_step):
     mean_score = np.mean(scores)
     average_similarities_to_bleu_scores = {}
-    similarities_to_show = np.array([i for i in range(0,100,similarity_step)])
+    similarities_to_show = np.array([i for i in range(0, 100, similarity_step)])
     for similarity_to_show in similarities_to_show:
         average_similarities_to_bleu_scores[similarity_to_show] = []
 
@@ -345,14 +393,115 @@ def average_similarity_between_test_and_train_samples_vs_bluert_score(qna_testin
 
     figure = get_figure()
 
-    similarity_scores = sorted(sim for sim in average_similarities_to_bleu_scores.keys() if average_similarities_to_bleu_scores[sim] != [])
-    bluert_scores = [np.mean(average_similarities_to_bleu_scores[similarity_score]) for similarity_score in similarity_scores]
-    plt.plot(similarity_scores, bluert_scores, marker="o", markersize=5, linestyle="solid", label="n = {0}, similarity_step = {1}".format(str(n), str(similarity_step)))
+    similarity_scores = sorted(
+        sim for sim in average_similarities_to_bleu_scores.keys() if average_similarities_to_bleu_scores[sim] != [])
+    bluert_scores = [np.mean(average_similarities_to_bleu_scores[similarity_score]) for similarity_score in
+                     similarity_scores]
+    plt.plot(similarity_scores, bluert_scores, marker="o", markersize=5, linestyle="solid",
+             label="n = {0}, similarity_step = {1}".format(str(n), str(similarity_step)))
     plt.plot(similarity_scores, [mean_score for _ in similarity_scores], label="mean bluert score")
-    plt.title("Average Similarity Between Test QnA and 'n' most similat Training QnAs vs BLEURT Score of Generated Explanation for that test QnA")
-    plt.xlabel("average similarity between test Q/A and 'n' most similar Training QnAs - " + similarity_measure.__name__)
+    plt.title(
+        "Average Similarity Between Test QnA and 'n' most similat Training QnAs vs BLEURT Score of Generated Explanation for that test QnA")
+    plt.xlabel(
+        "average similarity between test Q/A and 'n' most similar Training QnAs - " + similarity_measure.__name__)
     plt.ylabel("(average) bleurt score of generated sentence")
     plt.legend(loc="upper left")
+    figure.show()
+
+
+# how faithful is the model to the input (retrieved) facts?
+def no_generated_explanations_vs_no_explanations_copied_from_input(questions_and_answers_with_seperator, generated_explanations_with_separator):
+
+    figure = get_figure()
+
+    no_gen_to_no_copied = {}
+    no_gen_to_no_copied_no_rep = {}
+
+    for i in range(len(generated_explanations_with_separator)):
+        input_facts = questions_and_answers_with_seperator[i].split("@@")[1].split("££")
+        gen_facts = generated_explanations_with_separator[i].split("$$")
+
+        no_gen_facts = len(gen_facts)
+
+        input_facts_bows = [get_bow_of_fact(input_fact) for input_fact in input_facts]
+        gen_facts_bows = [get_bow_of_fact(gen_fact) for gen_fact in gen_facts]
+
+        no_copied_facts = 0
+        no_copied_facts_no_rep = 0
+
+        for input_fact_bow in input_facts_bows:
+            count = gen_facts_bows.count(input_fact_bow)
+            if count > 0:
+                no_copied_facts_no_rep += 1
+                no_copied_facts += count
+
+        if no_gen_facts in no_gen_to_no_copied:
+            no_gen_to_no_copied[no_gen_facts].append(no_copied_facts)
+            no_gen_to_no_copied_no_rep[no_gen_facts].append(no_copied_facts_no_rep)
+
+        else:
+            no_gen_to_no_copied[no_gen_facts] = [no_copied_facts]
+            no_gen_to_no_copied_no_rep[no_gen_facts] = [no_copied_facts_no_rep]
+
+    no_gen = sorted(list(no_gen_to_no_copied.keys()))
+
+    # get mean no. copied facts
+    no_copied_all = []
+    no_copied_all_no_rep = []
+    for k in no_gen:
+        no_copied_all += no_gen_to_no_copied[k]
+        no_copied_all_no_rep += no_gen_to_no_copied_no_rep[k]
+
+    mean_no_copied = np.mean(no_copied_all)
+    mean_no_copied_no_rep = np.mean(no_copied_all_no_rep)
+
+
+    # get means for each no of generated facts
+    no_copied_means = [np.mean(no_gen_to_no_copied[k]) for k in no_gen]
+    no_copied_means_no_rep = [np.mean(no_gen_to_no_copied_no_rep[k]) for k in no_gen]
+
+    plt.plot(no_gen, no_copied_means, marker="o", markersize=5, linestyle="dashed", label="allow repeatedly copied input facts, mean = {0}".format(mean_no_copied))
+    plt.plot(no_gen, no_copied_means_no_rep, marker="o", markersize=5, linestyle="dashed", label="don't allow repeatedly copied input facts, mean = {0}".format(mean_no_copied_no_rep))
+
+    plt.title("No. Generated facts vs No facts Copied from retrieved facts in input")
+    plt.xlabel("No. Generated facts")
+    plt.ylabel("No copied facts from input")
+    plt.legend(loc="upper left")
+
+    figure.show()
+
+# how faithful should the model ideally be? not really insightful since it will tend to copy more
+# when it needs to generate more facts, and when it generates more facts score tends to be less
+def no_facts_copied_from_input_vs_score(questions_and_answers_with_seperator, generated_explanations_with_separator, scores):
+
+    figure = get_figure()
+
+    no_copied_to_score = {}
+
+    for i in range(len(questions_and_answers_with_seperator)):
+        input_facts = questions_and_answers_with_seperator[i].split("@@")[1].split("££")
+        gen_facts = generated_explanations_with_separator[i].split("$$")
+
+        input_facts_bows = [get_bow_of_fact(input_fact) for input_fact in input_facts]
+        gen_facts_bows = [get_bow_of_fact(gen_fact) for gen_fact in gen_facts]
+
+        no_copied_facts = 0
+        for gen_fact_bow in gen_facts_bows:
+            if gen_fact_bow in input_facts_bows:
+                no_copied_facts += 1
+
+        if no_copied_facts in no_copied_to_score:
+            no_copied_to_score[no_copied_facts].append(scores[i])
+        else:
+            no_copied_to_score[no_copied_facts] = [scores[i]]
+
+    no_copied= sorted(list(no_copied_to_score.keys()))
+    mean_scores = [np.mean(no_copied_to_score[k]) for k in no_copied]
+
+    plt.plot(no_copied, mean_scores, marker="o", markersize=5, linestyle="dashed")
+    plt.title("No. copied facts from input vs score")
+    plt.xlabel("No. copied facts")
+    plt.ylabel("bleurt score")
     figure.show()
 
 if __name__ == "__main__":
@@ -367,14 +516,21 @@ if __name__ == "__main__":
     generated_text_with_separator = []
 
     questions_and_answers = []
+    questions_and_answers_with_separator = []
+
     # with separator
     for x in df_predictions["Generated Text"]:
         generated_text_with_separator.append(
-            x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", "").replace("<|endoftext|>", ""))
+            x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", "").replace(
+                "<|endoftext|>", ""))
     for x in df_predictions["Actual Text"]:
         reference_text_with_separator.append(
-            x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", "").replace("<|endoftext|>", ""))
+            x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", "").replace(
+                "<|endoftext|>", ""))
     for x in df_predictions["Questions"]:
+        questions_and_answers_with_separator.append(x)
+        if "@@" in x:
+            x = x.split("@@")[0]
         questions_and_answers.append(x.replace("<|endoftext|>", ""))
 
     # without separator
@@ -384,49 +540,6 @@ if __name__ == "__main__":
     for x in reference_text_with_separator:
         no_explanations_reference.append(x.count("$$") + 1)
         reference_text.append(x.replace("$$", "."))
-
-    # no_generated_facts_vs_no_facts_in_ref_and_no_repeated_facts(references_with_seperator=reference_text_with_separator,
-    #                                                             generated_with_separator=generated_text_with_separator)
-
-    # similarity_score_for_QnA_and_reference_vs_BLEURT_score_of_generated_explanation(
-    #     questions_and_answers=questions_and_answers,
-    #     scores=df_predictions[BLERT_SCORES],
-    #     references=reference_text,
-    #     similarity_measure=jaccard_similarity,
-    #     similarity_step=10
-    # )
-
-    #
-    average_similarity_between_test_and_train_samples_vs_bluert_score(
-        qna_testing_set=questions_and_answers,
-        qna_training_set=pd.read_csv(TRAINING_DATA_CSV_PATH, "\t")["question_and_answer"],
-        similarity_measure=jaccard_similarity,
-        scores=df_predictions[BLERT_SCORES],
-        n=3,
-        similarity_step=10
-    )
-
-    show_plots()
-    sys.exit()
-
-    # average_similarity_between_test_and_train_samples_vs_bluert_score(
-    #     qna_testing_set=df_predictions["Questions"],
-    #     qna_training_set=pd.read_csv(TRAINING_DATA_CSV_PATH, "\t")["question_and_answer"],
-    #     similarity_measure=jaccard_similarity,
-    #     scores=df_predictions[BLERT_SCORES],
-    #     n=1
-    # )
-    # show_plots()
-    # sys.exit()
-
-    # average_similarity_of_each_test_QnA_to_n_closest_QnAs_in_training_set_vs_no_test_samples_with_this_score(
-    #     qna_testing_set=df_predictions["Questions"],
-    #     qna_training_set=pd.read_csv(TRAINING_DATA_CSV_PATH, "\t")["question_and_answer"],
-    #     similarity_measure=jaccard_similarity,
-    #     ns=[1, 3, 100]
-    # )
-    # show_plots()
-    # sys.exit()
 
     # if predictions csv does not contain scores, add them                                                                                                        "."))
     try:
@@ -441,12 +554,52 @@ if __name__ == "__main__":
         df_predictions["bleurt_scores"] = bleurt_scores
         df_predictions.to_csv(DEV_PREDICTIONS_CSV_PATH.replace(".csv", "_with_BLEURT_scores.csv"))
 
+    # #shows how the score decreases as the explanation contains more hops
     # no_hops_in_reference_vs_score(no_hops_reference=no_explanations_reference,
     #                               scores=bleurt_scores)
+    #
+    # # from the facts that the model generates: how many are relevant? and how many are repeated?
+    # no_generated_facts_vs_no_facts_in_ref_and_no_repeated_facts(references_with_seperator=reference_text_with_separator,
+    #                                                             generated_with_separator=generated_text_with_separator)
+    #
+    # # expectation is that the more similar the QnA is to the golden explanation, the better the model will do
+    # similarity_score_for_QnA_and_reference_vs_BLEURT_score_of_generated_explanation(
+    #     questions_and_answers=questions_and_answers,
+    #     scores=df_predictions[BLERT_SCORES],
+    #     references=reference_text,
+    #     similarity_measure=jaccard_similarity,
+    #     similarity_step=10
+    # )
+    #
+    # # see if model can generalize to OOD questions
+    # # expectation: the more similar test question is to train questions the better the model will do
+    # average_similarity_between_test_and_train_samples_vs_bluert_score(
+    #     qna_testing_set=questions_and_answers,
+    #     qna_training_set=pd.read_csv(TRAINING_DATA_CSV_PATH, "\t")["question_and_answer"],
+    #     similarity_measure=jaccard_similarity,
+    #     scores=df_predictions[BLERT_SCORES],
+    #     n=3,
+    #     similarity_step=10
+    # )
+    #
+    # # ideally this should be y = x, see if the model generates enough facts
     # no_explanations_in_reference_vs_no_explanations_in_generated(no_explanations_reference=no_explanations_reference,
     #                                                              no_explanations_generated=no_explanations_generated)
 
-    # no_words_in_question_vs_score(questions=df_predictions["Questions"],
+    questions_and_answers_with_separator = pd.read_csv("evaluation/t5-retrieve-prompt/predictions_with_BLEURT_scores.csv")["Questions"]
+
+    no_generated_explanations_vs_no_explanations_copied_from_input(questions_and_answers_with_seperator=questions_and_answers_with_separator,
+                                                                   generated_explanations_with_separator=generated_text_with_separator)
+
+    no_facts_copied_from_input_vs_score(questions_and_answers_with_seperator=questions_and_answers_with_separator,
+                                        generated_explanations_with_separator=generated_text_with_separator,
+                                        scores=bleurt_scores)
+
+
+    # todo: fix
+    # # does the model's performance degrade when the questions are longer?
+    # no_words_in_question_vs_score(questions=questions_and_answers,
     #                               scores=bleurt_scores)
 
     show_plots()
+    sys.exit()
