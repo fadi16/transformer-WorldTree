@@ -3,12 +3,16 @@ import heapq
 from typing import List
 
 import nltk
+nltk.download('stopwords')
+#nltk.download("punc")
 import pandas as pd
 import numpy as np
 from datasets import load_metric
 import matplotlib.pyplot as plt
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
+
+
 
 ###############################################
 ## todo: change file path
