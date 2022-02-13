@@ -7,7 +7,7 @@ if __name__ == "__main__":
     ####################### CHANGE AS APPROPRRIATE #######################
     path_train = "./data/v2-proper-data/train_data_wed.csv"
     path_dev = "./data/v2-proper-data/dev_data_wed.csv"
-    chosen_model_params = t5_model_params
+    chosen_model_params = bart_model_params
     ######################################################################
 
     df_train = pd.read_csv(path_train, delimiter="\t")

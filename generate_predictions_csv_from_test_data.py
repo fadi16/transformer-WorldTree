@@ -12,7 +12,7 @@ from retrieve_prompt_generate import retrieve
 #############################################
 MODE = "t5"
 OUTPUT_FILE_PATH = "evaluation/validation_predictions_vs_actuals.csv"
-MODEL_CHECKPOINT_DIR_PATH = "./outputs/checkpoints/T5-FromQnA-with-proper-data-splitting"
+MODEL_CHECKPOINT_DIR_PATH = "./outputs/checkpoints/t5-plain-FromQnA-with-proper-data-splitting"
 TEST_DATA_PATH = "./data/v2-proper-data/dev_data_wed.csv"
 TRAIN_DATA_PATH = "./data/v2-proper-data/train_data_wed.csv"
 target_text = "explanation"
@@ -24,7 +24,7 @@ if __name__ == "__main__":
         tokenizer = BartTokenizer.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
         params_of_mode_model = bart_model_params
     else:
-        print("---- Using T5 ----")
+        print("---- Using t5-plain ----")
         tokenizer = T5Tokenizer.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
         params_of_mode_model = t5_model_params
 

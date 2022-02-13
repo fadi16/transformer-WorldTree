@@ -13,8 +13,8 @@ from nltk.stem.porter import PorterStemmer
 ###############################################
 ## todo: change file path
 ###############################################
-#DEV_PREDICTIONS_CSV_PATH = "evaluation/t5-retrieve-prompt/predictions_with_BLEURT_scores.csv"  # "evaluation/T5/validation_predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-T5-from-hypothesis-with-data-splitting.csv"
-DEV_PREDICTIONS_CSV_PATH = "evaluation/T5/validation_predictions_vs_actuals-T5-from-QnA-with-data-splitting_with_BLEURT_scores.csv"  # "evaluation/T5/validation_predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-T5-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-T5-from-hypothesis-with-data-splitting.csv"
+DEV_PREDICTIONS_CSV_PATH = "evaluation/t5-retrieve-prompt/val_predictions_with_BLEURT_scores.csv"  # "evaluation/t5-plain/validation_predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-t5-plain-from-hypothesis-with-data-splitting.csv"
+# DEV_PREDICTIONS_CSV_PATH = "evaluation/t5-plain/validation_predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting_with_BLEURT_scores.csv"  # "evaluation/t5-plain/validation_predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-t5-plain-from-hypothesis-with-data-splitting.csv"
 
 TRAINING_DATA_CSV_PATH = "data/v2-proper-data/train_data_wed.csv"
 
@@ -26,6 +26,7 @@ FIGURE_COUNTER = 0
 
 stemmer = PorterStemmer()
 
+
 def show_plots():
     plt.show()
 
@@ -36,38 +37,39 @@ def get_figure():
     FIGURE_COUNTER += 1
     return f
 
+
 def pprint_best_worst_results(results):
     for result in results:
-      i = 0
-      question = result["question"]
-      if "@@" in question:
-          question_and_retrieved_input = question.split("@@")
-          question = question_and_retrieved_input[0]
-          retrieved_facts = question_and_retrieved_input[1].split("££")
-          print("Question: ", question)
-          print("Retrieved facts: ")
-          i = 0
-          for fact in retrieved_facts:
-            print("\t", i, ".\t", fact)
+        i = 0
+        question = result["question"]
+        if "@@" in question:
+            question_and_retrieved_input = question.split("@@")
+            question = question_and_retrieved_input[0]
+            retrieved_facts = question_and_retrieved_input[1].split("££")
+            print("Question: ", question)
+            print("Retrieved facts: ")
+            i = 0
+            for fact in retrieved_facts:
+                print("\t", i, ".\t", fact)
+                i += 1
+        else:
+            print("Question: ", question)
+
+        reference_explanations = result["reference"].split(".")
+        print("Reference Explanations:")
+        i = 0
+        for exp in reference_explanations:
+            print("\t", i, ".\t", exp)
             i += 1
-      else:
-          print("Question: ", question)
 
-      reference_explanations = result["reference"].split(".")
-      print("Reference Explanations:")
-      i = 0
-      for exp in reference_explanations:
-          print("\t", i, ".\t", exp)
-          i += 1
-
-      print("Generated Explanations:")
-      generated_explanations = result["generated"].split(".")
-      i = 0
-      for exp in generated_explanations:
-          print("\t", i, ".\t", exp)
-          i += 1
-      print("Score:", result["score"])
-      print("=" * 40)
+        print("Generated Explanations:")
+        generated_explanations = result["generated"].split(".")
+        i = 0
+        for exp in generated_explanations:
+            print("\t", i, ".\t", exp)
+            i += 1
+        print("Score:", result["score"])
+        print("=" * 40)
 
 
 def no_hops_in_reference_vs_score(no_hops_reference, scores):
@@ -142,7 +144,7 @@ def no_explanations_in_reference_vs_no_explanations_in_generated(no_explanations
     figure.show()
 
 
-def evaluate(metric_key: str, questions, references, generated):
+def evaluate(metric_key: str, questions, references, generated, best_and_worst=True):
     if metric_key == "bleurt":
         metric = load_metric('bleurt', "bleurt-large-512")
     else:
@@ -152,6 +154,9 @@ def evaluate(metric_key: str, questions, references, generated):
     c = metric.compute()
     scores = np.array(c["scores"])
     scores_mean = np.mean(scores)
+
+    if not best_and_worst:
+        return scores, scores_mean, None, None
 
     questions = np.array(questions)
     references = np.array(references)
@@ -175,7 +180,7 @@ def evaluate(metric_key: str, questions, references, generated):
     print("Mean Score = " + str(scores_mean))
     print("best explanations:")
     best_explanations_dict = best_explanations_df.to_dict("record")
-    print(best_explanations_dict)
+    pprint_best_worst_results(best_explanations_dict)
 
     # for worst explanations
     indicies_of_worst_explanations = np.argpartition(scores, num_of_best_worst_explanations)[
@@ -194,7 +199,7 @@ def evaluate(metric_key: str, questions, references, generated):
 
     print("worst explanations:")
     worst_explanations_dict = worst_explanations_df.to_dict("record")
-    print(worst_explanations_dict)
+    pprint_best_worst_results(worst_explanations_dict)
     print("==========================================================")
 
     return scores, scores_mean, best_explanations_df, worst_explanations_df
@@ -202,8 +207,10 @@ def evaluate(metric_key: str, questions, references, generated):
 
 def get_bow_of_fact(fact):
     return set(
-            stemmer.stem(word.lower().strip()) for word in fact.split() if word.lower().strip() not in STOP_WORDS and word != "" and not word.isspace()
+        stemmer.stem(word.lower().strip()) for word in fact.split() if
+        word.lower().strip() not in STOP_WORDS and word != "" and not word.isspace()
     )
+
 
 # 2 facts are the same if their BOWs without stopwords are the same
 def no_generated_facts_vs_no_facts_in_ref_and_no_repeated_facts(references_with_seperator, generated_with_separator):
@@ -410,8 +417,8 @@ def average_similarity_between_test_and_train_samples_vs_bluert_score(qna_testin
 
 
 # how faithful is the model to the input (retrieved) facts?
-def no_generated_explanations_vs_no_explanations_copied_from_input(questions_and_answers_with_seperator, generated_explanations_with_separator):
-
+def no_generated_explanations_vs_no_explanations_copied_from_input(questions_and_answers_with_seperator,
+                                                                   generated_explanations_with_separator):
     figure = get_figure()
 
     no_gen_to_no_copied = {}
@@ -455,13 +462,14 @@ def no_generated_explanations_vs_no_explanations_copied_from_input(questions_and
     mean_no_copied = np.mean(no_copied_all)
     mean_no_copied_no_rep = np.mean(no_copied_all_no_rep)
 
-
     # get means for each no of generated facts
     no_copied_means = [np.mean(no_gen_to_no_copied[k]) for k in no_gen]
     no_copied_means_no_rep = [np.mean(no_gen_to_no_copied_no_rep[k]) for k in no_gen]
 
-    plt.plot(no_gen, no_copied_means, marker="o", markersize=5, linestyle="dashed", label="allow repeatedly copied input facts, mean = {0}".format(mean_no_copied))
-    plt.plot(no_gen, no_copied_means_no_rep, marker="o", markersize=5, linestyle="dashed", label="don't allow repeatedly copied input facts, mean = {0}".format(mean_no_copied_no_rep))
+    plt.plot(no_gen, no_copied_means, marker="o", markersize=5, linestyle="dashed",
+             label="allow repeatedly copied input facts, mean = {0}".format(mean_no_copied))
+    plt.plot(no_gen, no_copied_means_no_rep, marker="o", markersize=5, linestyle="dashed",
+             label="don't allow repeatedly copied input facts, mean = {0}".format(mean_no_copied_no_rep))
 
     plt.title("No. Generated facts vs No facts Copied from retrieved facts in input")
     plt.xlabel("No. Generated facts")
@@ -470,10 +478,11 @@ def no_generated_explanations_vs_no_explanations_copied_from_input(questions_and
 
     figure.show()
 
+
 # how faithful should the model ideally be? not really insightful since it will tend to copy more
 # when it needs to generate more facts, and when it generates more facts score tends to be less
-def no_facts_copied_from_input_vs_score(questions_and_answers_with_seperator, generated_explanations_with_separator, scores):
-
+def no_facts_copied_from_input_vs_score(questions_and_answers_with_seperator, generated_explanations_with_separator,
+                                        scores):
     figure = get_figure()
 
     no_copied_to_score = {}
@@ -495,7 +504,7 @@ def no_facts_copied_from_input_vs_score(questions_and_answers_with_seperator, ge
         else:
             no_copied_to_score[no_copied_facts] = [scores[i]]
 
-    no_copied= sorted(list(no_copied_to_score.keys()))
+    no_copied = sorted(list(no_copied_to_score.keys()))
     mean_scores = [np.mean(no_copied_to_score[k]) for k in no_copied]
 
     plt.plot(no_copied, mean_scores, marker="o", markersize=5, linestyle="dashed")
@@ -504,10 +513,27 @@ def no_facts_copied_from_input_vs_score(questions_and_answers_with_seperator, ge
     plt.ylabel("bleurt score")
     figure.show()
 
-if __name__ == "__main__":
-    df_predictions = pd.read_csv(DEV_PREDICTIONS_CSV_PATH, delimiter=",")
 
+def get_generated_no_exact_repeated_facts(generated_text_with_separators):
+    generated_no_exact_rep = []
+    no_repeated_facts = 0
+    no_generated_facts = 0
+    for generated_exp in generated_text_with_separators:
+        facts_no_rep = []
+        facts = generated_exp.split("$$")
+        for fact in facts:
+            if fact not in facts_no_rep:
+                facts_no_rep.append(fact)
+            else:
+                no_repeated_facts += 1
+            no_generated_facts += 1
+        generated_no_exact_rep.append(".".join(facts_no_rep))
+    return generated_no_exact_rep, no_repeated_facts / no_generated_facts
+
+
+def preprocess_predictions_df(df):
     generated_text = []
+    generated_text_with_no_exact_repetitions = []
     reference_text = []
     no_explanations_reference = []
     no_explanations_generated = []
@@ -519,15 +545,15 @@ if __name__ == "__main__":
     questions_and_answers_with_separator = []
 
     # with separator
-    for x in df_predictions["Generated Text"]:
+    for x in df["Generated Text"]:
         generated_text_with_separator.append(
             x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", "").replace(
                 "<|endoftext|>", ""))
-    for x in df_predictions["Actual Text"]:
+    for x in df["Actual Text"]:
         reference_text_with_separator.append(
             x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", "").replace(
                 "<|endoftext|>", ""))
-    for x in df_predictions["Questions"]:
+    for x in df["Questions"]:
         questions_and_answers_with_separator.append(x)
         if "@@" in x:
             x = x.split("@@")[0]
@@ -541,63 +567,80 @@ if __name__ == "__main__":
         no_explanations_reference.append(x.count("$$") + 1)
         reference_text.append(x.replace("$$", "."))
 
-    # if predictions csv does not contain scores, add them                                                                                                        "."))
+    generated_text_with_no_exact_repetitions, no_repeated_to_no_generated_ratio = get_generated_no_exact_repeated_facts(
+        generated_text_with_separator)
+
+    return (questions_and_answers, questions_and_answers_with_separator,
+            reference_text, reference_text_with_separator,
+            generated_text, generated_text_with_separator,
+            generated_text_with_no_exact_repetitions, no_repeated_to_no_generated_ratio,
+            no_explanations_reference, no_explanations_generated)
+
+
+if __name__ == "__main__":
+    df_predictions = pd.read_csv(DEV_PREDICTIONS_CSV_PATH, delimiter=",")
+
+    (questions_and_answers, questions_and_answers_with_separator,
+     reference_text, reference_text_with_separator,
+     generated_text, generated_text_with_separator,
+     generated_text_with_no_exact_repetitions, no_repeated_to_no_generated_ratio,
+     no_explanations_reference, no_explanations_generated) = preprocess_predictions_df(df_predictions)
+
     try:
         bleurt_scores = df_predictions[BLERT_SCORES]
     except KeyError:
         bleurt_scores, bleurt_mean_score, bleurt_best_df, bleurt_worst_df = evaluate(metric_key="bleurt",
-                                                                                     generated=generated_text,
+                                                                                     generated=generated_text_with_no_exact_repetitions,
                                                                                      references=reference_text,
                                                                                      questions=df_predictions[
                                                                                          "Questions"])
         # save new csv with scores
         df_predictions["bleurt_scores"] = bleurt_scores
-        df_predictions.to_csv(DEV_PREDICTIONS_CSV_PATH.replace(".csv", "_with_BLEURT_scores.csv"))
+        df_predictions.to_csv(DEV_PREDICTIONS_CSV_PATH.replace(".csv", "_generated_no_exact_repitition.csv"))
 
-    # #shows how the score decreases as the explanation contains more hops
-    # no_hops_in_reference_vs_score(no_hops_reference=no_explanations_reference,
-    #                               scores=bleurt_scores)
-    #
-    # # from the facts that the model generates: how many are relevant? and how many are repeated?
-    # no_generated_facts_vs_no_facts_in_ref_and_no_repeated_facts(references_with_seperator=reference_text_with_separator,
-    #                                                             generated_with_separator=generated_text_with_separator)
-    #
-    # # expectation is that the more similar the QnA is to the golden explanation, the better the model will do
-    # similarity_score_for_QnA_and_reference_vs_BLEURT_score_of_generated_explanation(
-    #     questions_and_answers=questions_and_answers,
-    #     scores=df_predictions[BLERT_SCORES],
-    #     references=reference_text,
-    #     similarity_measure=jaccard_similarity,
-    #     similarity_step=10
-    # )
-    #
-    # # see if model can generalize to OOD questions
-    # # expectation: the more similar test question is to train questions the better the model will do
-    # average_similarity_between_test_and_train_samples_vs_bluert_score(
-    #     qna_testing_set=questions_and_answers,
-    #     qna_training_set=pd.read_csv(TRAINING_DATA_CSV_PATH, "\t")["question_and_answer"],
-    #     similarity_measure=jaccard_similarity,
-    #     scores=df_predictions[BLERT_SCORES],
-    #     n=3,
-    #     similarity_step=10
-    # )
-    #
-    # # ideally this should be y = x, see if the model generates enough facts
-    # no_explanations_in_reference_vs_no_explanations_in_generated(no_explanations_reference=no_explanations_reference,
-    #                                                              no_explanations_generated=no_explanations_generated)
+    # shows how the score decreases as the explanation contains more hops
+    no_hops_in_reference_vs_score(no_hops_reference=no_explanations_reference,
+                                  scores=bleurt_scores)
 
-    questions_and_answers_with_separator = pd.read_csv("evaluation/t5-retrieve-prompt/predictions_with_BLEURT_scores.csv")["Questions"]
+    # from the facts that the model generates: how many are relevant? and how many are repeated?
+    no_generated_facts_vs_no_facts_in_ref_and_no_repeated_facts(references_with_seperator=reference_text_with_separator,
+                                                                generated_with_separator=generated_text_with_separator)
 
-    no_generated_explanations_vs_no_explanations_copied_from_input(questions_and_answers_with_seperator=questions_and_answers_with_separator,
-                                                                   generated_explanations_with_separator=generated_text_with_separator)
+    # expectation is that the more similar the QnA is to the golden explanation, the better the model will do
+    similarity_score_for_QnA_and_reference_vs_BLEURT_score_of_generated_explanation(
+        questions_and_answers=questions_and_answers,
+        scores=df_predictions[BLERT_SCORES],
+        references=reference_text,
+        similarity_measure=jaccard_similarity,
+        similarity_step=10
+    )
+
+    # see if model can generalize to OOD questions
+    # expectation: the more similar test question is to train questions the better the model will do
+    average_similarity_between_test_and_train_samples_vs_bluert_score(
+        qna_testing_set=questions_and_answers,
+        qna_training_set=pd.read_csv(TRAINING_DATA_CSV_PATH, "\t")["question_and_answer"],
+        similarity_measure=jaccard_similarity,
+        scores=df_predictions[BLERT_SCORES],
+        n=3,
+        similarity_step=10
+    )
+
+    # ideally this should be y = x, see if the model generates enough facts
+    no_explanations_in_reference_vs_no_explanations_in_generated(no_explanations_reference=no_explanations_reference,
+                                                                 no_explanations_generated=no_explanations_generated)
+
+    questions_and_answers_with_separator = pd.read_csv("evaluation/t5-retrieve-prompt/val_predictions_with_BLEURT_scores.csv")["Questions"]
+    no_generated_explanations_vs_no_explanations_copied_from_input(
+        questions_and_answers_with_seperator=questions_and_answers_with_separator,
+        generated_explanations_with_separator=generated_text_with_separator)
 
     no_facts_copied_from_input_vs_score(questions_and_answers_with_seperator=questions_and_answers_with_separator,
                                         generated_explanations_with_separator=generated_text_with_separator,
                                         scores=bleurt_scores)
 
-
     # todo: fix
-    # # does the model's performance degrade when the questions are longer?
+    # does the model's performance degrade when the questions are longer?
     # no_words_in_question_vs_score(questions=questions_and_answers,
     #                               scores=bleurt_scores)
 

@@ -91,7 +91,7 @@ def trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str, ta
         num_workers=0
     )
 
-    if "bart" in model_params[model]:
+    if "bart" in model_params[MODEL]:
         optimizer = AdamW(
             model.parameters(),
             lr=3e-5,
@@ -131,7 +131,7 @@ def trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str, ta
                      loader=training_loader,
                      optimizer=optimizer,
                      logger=training_logger)
-        tb.add_scalar("Loss", loss, training_epoch)
+        tb.add_scalar("Loss", loss.item(), training_epoch)
 
         # evaluate at the end of each epoch
         print("Validating after training epoch #{0}\n".format(str(training_epoch)))
