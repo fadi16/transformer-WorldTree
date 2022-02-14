@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
         params_of_mode_model = bart_model_params
     else:
-        print("---- Using t5-plain ----")
+        print("---- Using T5 ----")
         tokenizer = T5Tokenizer.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
         model = T5ForConditionalGeneration.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
 
@@ -38,10 +38,11 @@ if __name__ == "__main__":
         print("USING RETRIEVAL METHOD")
         train_retrieved_facts, dev_retrieved_facts = retrieve.retrieve(training_df=df_train,
                                                                        testing_df=df_test,
-                                                                       no_similar_hypotheses=t5_model_params[
+                                                                       no_similar_hypotheses=params_of_mode_model[
                                                                            NO_SIMILAR_HYPOTHESIS],
-                                                                       no_retrieved_facts=t5_model_params[
-                                                                           NO_FACTS_TO_RETRIEVE])
+                                                                       no_retrieved_facts=params_of_mode_model[
+                                                                           NO_FACTS_TO_RETRIEVE],
+                                                                       only_central=params_of_mode_model[ONLY_CETRAL])
         for i in range(len(train_retrieved_facts)):
             df_train[params_of_mode_model[TRAIN_ON]][i] += " @@ " + train_retrieved_facts[i]
         for i in range(len(dev_retrieved_facts)):
