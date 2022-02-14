@@ -28,12 +28,23 @@ def fit_bm25_on_wtv2(utils, facts_bank, training_questions, facts_ids, training_
     return model
 
 
-def retrieve(training_df, testing_df, no_similar_hypotheses, no_retrieved_facts):
+def filter_out_non_central(explanations_corpus):
+    for question_id, question_dict in explanations_corpus.items():
+        question_dict["explanation"] = dict(
+            [(fact_id, fact_role) for fact_id, fact_role in question_dict["explanation"].items() if
+             fact_role == "CENTRAL"])
+    return explanations_corpus
+
+
+def retrieve(training_df, testing_df, no_similar_hypotheses, no_retrieved_facts, only_central=False):
     training_questions = training_df["hypothesis"]
     training_questions_ids = training_df["question_id"]
 
     with open(TRAINING_DATA_JSON_PATH) as json_file:
         explanations_corpus = json.load(json_file)
+
+    if only_central:
+        explanations_corpus = filter_out_non_central(explanations_corpus)
 
     with open(FACTS_BANK_JSON_PATH) as json_file:
         facts_bank_dict = json.load(json_file)
@@ -73,7 +84,6 @@ def retrieve(training_df, testing_df, no_similar_hypotheses, no_retrieved_facts)
                 retrieved_facts_for_question.append(high_exp_power_fact)
             retrieved_facts.append(" ££ ".join(retrieved_facts_for_question))
         return retrieved_facts
-
 
     # load test data and retrieve facts for each question
     testing_retrieved_facts = get_retrieved_facts(testing_df)
