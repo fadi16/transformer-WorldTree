@@ -16,18 +16,20 @@ MODEL_CHECKPOINT_DIR_PATH = "./outputs/checkpoints/t5-plain-FromQnA-with-proper-
 TEST_DATA_PATH = "./data/v2-proper-data/dev_data_wed.csv"
 TRAIN_DATA_PATH = "./data/v2-proper-data/train_data_wed.csv"
 target_text = "explanation"
+params_of_mode_model = bart_model_params
 ##############################################
 
 if __name__ == "__main__":
-    if MODE == "bart":
+    if "bart" in params_of_mode_model[MODEL]:
         print("---- Using BART ----")
         tokenizer = BartTokenizer.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
+        model = BartForConditionalGeneration.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
+
         params_of_mode_model = bart_model_params
     else:
         print("---- Using t5-plain ----")
         tokenizer = T5Tokenizer.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
-        params_of_mode_model = t5_model_params
-
+        model = T5ForConditionalGeneration.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
 
     df_test = pd.read_csv(TEST_DATA_PATH, delimiter="\t")
     df_train = pd.read_csv(TRAIN_DATA_PATH, delimiter="\t")
@@ -64,11 +66,6 @@ if __name__ == "__main__":
 
     predictions = []
     actuals = []
-
-    if MODE == "bart":
-        model = BartForConditionalGeneration.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
-    else:
-        model = T5ForConditionalGeneration.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = model.to(device)
