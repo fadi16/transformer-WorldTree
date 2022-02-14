@@ -14,6 +14,7 @@ NO_FACTS_TO_RETRIEVE = "NO_FACTS_TO_RETRIEVE"
 QUESTION_AND_ANSWER = "question_and_answer"
 HYPOTHESIS = "hypothesis"
 TRAIN_ON = "TRAIN_ON"
+ONLY_CETRAL = "ONLY_CETRAL"
 
 t5_model_params = {
     "MODEL": "t5-base",
@@ -28,6 +29,7 @@ t5_model_params = {
     "AUGMENT_INPUT_WITH_RETRIEVED_FACTS": True,
     "NO_SIMILAR_HYPOTHESIS": 3,
     "NO_FACTS_TO_RETRIEVE": 5,
+    "ONLY_CETRAL": True,
     "TRAIN_ON": QUESTION_AND_ANSWER
 }
 
@@ -44,5 +46,6 @@ bart_model_params = {
     "AUGMENT_INPUT_WITH_RETRIEVED_FACTS": True,
     "NO_SIMILAR_HYPOTHESIS": 3,
     "NO_FACTS_TO_RETRIEVE": 5,
+    "ONLY_CETRAL": True,
     "TRAIN_ON": QUESTION_AND_ANSWER
 }

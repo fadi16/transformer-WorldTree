@@ -131,7 +131,7 @@ def trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str, ta
                      loader=training_loader,
                      optimizer=optimizer,
                      logger=training_logger)
-        tb.add_scalar("Loss", loss.item(), training_epoch)
+        tb.add_scalar("Loss", loss, training_epoch)
 
         # evaluate at the end of each epoch
         print("Validating after training epoch #{0}\n".format(str(training_epoch)))
@@ -175,6 +175,7 @@ def trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, source_text: str, ta
 def train_step(epoch, tokenizer, model, device, loader, optimizer, logger):
     model.train()
 
+    final_loss = None
     # todo: data should be a batch of inputs
     for _, data in enumerate(loader, start=0):
         y = data["target_ids"].to(device, dtype=torch.long)
@@ -197,6 +198,7 @@ def train_step(epoch, tokenizer, model, device, loader, optimizer, logger):
 
         # FA: this is cross entropy loss between predicted and golden output
         loss = outputs[0]
+        final_loss = loss.item()
 
         if _ % 100 == 0:
             logger.add_row(str(epoch), str(_), str(loss))
@@ -208,4 +210,4 @@ def train_step(epoch, tokenizer, model, device, loader, optimizer, logger):
         loss.backward()
         # gradient decent
         optimizer.step()
-    return loss
+    return final_loss

@@ -23,7 +23,8 @@ if __name__ == "__main__":
                                                                        no_similar_hypotheses=chosen_model_params[
                                                                            NO_SIMILAR_HYPOTHESIS],
                                                                        no_retrieved_facts=chosen_model_params[
-                                                                           NO_FACTS_TO_RETRIEVE])
+                                                                           NO_FACTS_TO_RETRIEVE],
+                                                                       only_central=chosen_model_params[ONLY_CETRAL])
         for i in range(len(train_retrieved_facts)):
             df_train[chosen_model_params[TRAIN_ON]][i] += " @@ " + train_retrieved_facts[i]
         for i in range(len(dev_retrieved_facts)):

@@ -29,6 +29,7 @@ BLERT_SCORES = "bleurt_scores"
 FIGURE_COUNTER = 0
 
 stemmer = PorterStemmer()
+bleurt_metric = None
 
 
 def show_plots():
@@ -149,13 +150,15 @@ def no_explanations_in_reference_vs_no_explanations_in_generated(no_explanations
 
 
 def evaluate(metric_key: str, questions, references, generated, best_and_worst=True):
+    global bleurt_metric
     if metric_key == "bleurt":
-        metric = load_metric('bleurt', "bleurt-large-512")
+        if not bleurt_metric:
+            bleurt_metric = load_metric('bleurt', "bleurt-large-512")
     else:
         raise Exception()
 
-    metric.add_batch(predictions=generated, references=references)
-    c = metric.compute()
+    bleurt_metric.add_batch(predictions=generated, references=references)
+    c = bleurt_metric.compute()
     scores = np.array(c["scores"])
     scores_mean = np.mean(scores)
 
