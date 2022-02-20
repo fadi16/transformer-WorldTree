@@ -10,7 +10,6 @@ from retrieve_prompt_generate import retrieve
 ############################################
 # todo: change checkpoint and file paths if needed
 #############################################
-MODE = "t5"
 OUTPUT_FILE_PATH = "evaluation/validation_predictions_vs_actuals.csv"
 MODEL_CHECKPOINT_DIR_PATH = "./outputs/checkpoints/t5-plain-FromQnA-with-proper-data-splitting"
 TEST_DATA_PATH = "./data/v2-proper-data/dev_data_wed.csv"
@@ -86,7 +85,7 @@ if __name__ == "__main__":
                 num_beams=2,
                 repetition_penalty=2.5, # todo: theta 1.2 with greedy reported to have worked well based on paper
                 length_penalty=1.0, # todo: this greater than 1 encourages model to generate longer sentences and vice versa
-                #early_stopping=True # stop beam search once at least num_beams sentences are finished per batch
+                early_stopping=True # stop beam search once at least num_beams sentences are finished per batch
             )
 
             predicted_explanations = [tokenizer.decode(generated_id, skip_special_tokens=True, cleanup_tokenization_spaces=True)

@@ -17,7 +17,7 @@ from nltk.stem.porter import PorterStemmer
 ###############################################
 ## todo: change file path
 ###############################################
-DEV_PREDICTIONS_CSV_PATH = "evaluation/t5-retrieve-prompt/val_predictions_with_BLEURT_scores.csv"  # "evaluation/t5-plain/validation_predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-t5-plain-from-hypothesis-with-data-splitting.csv"
+DEV_PREDICTIONS_CSV_PATH = "evaluation/BART-retrieve-prompt/test_predictions_vs_actuals_no_rep_with_bleurt_scores.csv"  # "evaluation/t5-plain/validation_predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-t5-plain-from-hypothesis-with-data-splitting.csv"
 # DEV_PREDICTIONS_CSV_PATH = "evaluation/t5-plain/validation_predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting_with_BLEURT_scores.csv"  # "evaluation/t5-plain/validation_predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-t5-plain-from-hypothesis-with-data-splitting.csv"
 
 TRAINING_DATA_CSV_PATH = "data/v2-proper-data/train_data_wed.csv"
@@ -215,6 +215,7 @@ def evaluate(metric_key: str, questions, references, generated, best_and_worst=T
 def get_bow_of_fact(fact):
     return set(
         stemmer.stem(word.lower().strip()) for word in fact.split() if
+        #word.lower().strip() for word in fact.split() if
         word.lower().strip() not in STOP_WORDS and word != "" and not word.isspace()
     )
 
@@ -473,8 +474,8 @@ def no_generated_explanations_vs_no_explanations_copied_from_input(questions_and
     no_copied_means = [np.mean(no_gen_to_no_copied[k]) for k in no_gen]
     no_copied_means_no_rep = [np.mean(no_gen_to_no_copied_no_rep[k]) for k in no_gen]
 
-    plt.plot(no_gen, no_copied_means, marker="o", markersize=5, linestyle="dashed",
-             label="allow repeatedly copied input facts, mean = {0}".format(mean_no_copied))
+    # plt.plot(no_gen, no_copied_means, marker="o", markersize=5, linestyle="dashed",
+    #          label="allow repeatedly copied input facts, mean = {0}".format(mean_no_copied))
     plt.plot(no_gen, no_copied_means_no_rep, marker="o", markersize=5, linestyle="dashed",
              label="don't allow repeatedly copied input facts, mean = {0}".format(mean_no_copied_no_rep))
 
@@ -637,7 +638,8 @@ if __name__ == "__main__":
     no_explanations_in_reference_vs_no_explanations_in_generated(no_explanations_reference=no_explanations_reference,
                                                                  no_explanations_generated=no_explanations_generated)
 
-    questions_and_answers_with_separator = pd.read_csv("evaluation/t5-retrieve-prompt/val_predictions_with_BLEURT_scores.csv")["Questions"]
+    # todo change
+    questions_and_answers_with_separator = pd.read_csv("evaluation/BART-retrieve-prompt/test_predictions_vs_actuals_no_rep_with_bleurt_scores.csv")["Questions"]
     no_generated_explanations_vs_no_explanations_copied_from_input(
         questions_and_answers_with_seperator=questions_and_answers_with_separator,
         generated_explanations_with_separator=generated_text_with_separator)
@@ -646,10 +648,10 @@ if __name__ == "__main__":
                                         generated_explanations_with_separator=generated_text_with_separator,
                                         scores=bleurt_scores)
 
-    # todo: fix
-    # does the model's performance degrade when the questions are longer?
-    # no_words_in_question_vs_score(questions=questions_and_answers,
-    #                               scores=bleurt_scores)
+    #todo: fix
+    #does the model's performance degrade when the questions are longer?
+    #no_words_in_question_vs_score(questions=questions_and_answers,
+    #                              scores=bleurt_scores)
 
     show_plots()
     sys.exit()

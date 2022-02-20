@@ -1,0 +1,531 @@
+[nltk_data] Downloading package stopwords to /root/nltk_data...
+[nltk_data]   Package stopwords is already up-to-date!
+2022-02-14 16:07:52.439521: W tensorflow/core/common_runtime/gpu/gpu_bfc_allocator.cc:39] Overriding allow_growth setting because the TF_FORCE_GPU_ALLOW_GROWTH environment variable is set. Original config value was 0.
+== For bleurt ==
+Mean Score = -0.33053111854940653
+best explanations:
+main_eval.py:189: FutureWarning: Using short name for 'orient' is deprecated. Only the options: ('dict', list, 'series', 'split', 'records', 'index') will be used in a future version. Use one of the above to silence this warning.
+  best_explanations_dict = best_explanations_df.to_dict("record")
+Question:  A major function of a plant's roots is to take in water
+Retrieved facts:
+	 0 .	  roots are a vehicle for absorbing water and nutrients from soil into the plant
+	 1 .	  plant uptake is when plants absorb nutrients; water from soil into themselves through their roots
+	 2 .	  soil contains nutrients for plants
+	 3 .	  some minerals are nutrients
+	 4 .	  roots anchor plants into the soil
+Reference Explanations:
+	 0 .	 roots are a part of a plant; tree
+	 1 .	  plant uptake is when plants absorb nutrients; water from soil into themselves through their roots
+	 2 .	  take in means absorb
+	 3 .	  absorbing is a kind of function
+Generated Explanations:
+	 0 .	 a plant uptake is when plants absorb nutrients; water from soil into themselves through their roots
+	 1 .	  roots anchor plants into the soil
+	 2 .	  roots are a vehicle for absorbing water and nutrients from soil into the plant
+	 3 .	  take in means absorb
+Score: 0.3118148744106293
+========================================
+Question:  What is the smallest unit of an element that retains the properties of that element? atom
+Retrieved facts:
+	 0 .	  the atom is the smallest unit; particle that has the properties of an element
+Reference Explanations:
+	 0 .	 the atom is the smallest unit; particle that has the properties of an element
+	 1 .	  to retain means to have
+Generated Explanations:
+	 0 .	 the atom is the smallest unit; particle that has the properties of an element
+Score: 0.31827670335769653
+========================================
+Question:  Which tool would best help a student closely observe the smallest living thing in a drop of pond water? microscope
+Retrieved facts:
+	 0 .	  a microscope is a kind of tool for observing small things
+	 1 .	  a cell is very small
+	 2 .	  size is a property of objects and includes ordered values of microscopic; tiny; small; medium; large
+	 3 .	  a microscope is used to see small things; microscopic things; specimens by scientists by making them appear bigger
+	 4 .	  as the size of an object appears larger , that object will be seen;be observed more easily; better
+Reference Explanations:
+	 0 .	 a microscope is a kind of tool for observing small things
+	 1 .	  a microscope is used to see small things; microscopic things; specimens by scientists by making them appear bigger
+	 2 .	  to help; to benefit means to be of use
+	 3 .	  to get a better look at means to see better
+	 4 .	  look at means observe
+Generated Explanations:
+	 0 .	 a microscope is a kind of tool for observing small things
+	 1 .	  instrument means tool
+	 2 .	  a microscope is used to see small things; microscopic things; specimens by scientists by making them appear bigger
+	 3 .	  as the size of an object appears larger that object will be seen;be observed more easily; better
+	 4 .	  a microscope is used to see small things; microscopic things; specimens by scientists by making them appear bigger
+Score: 0.35830366611480713
+========================================
+Question:  James recorded a measurement of 3° Celsius. Which tool was James most likely using to measure temperature? thermometer
+Retrieved facts:
+	 0 .	  a thermometer is a kind of instrument for measuring temperature
+	 1 .	  a thermometer is used to measure temperature
+	 2 .	  temperature is a property of weather
+	 3 .	  degrees celsius ( C ) is a metric unit used for measuring temperature generally used for values between -273.0 and 50000000.0
+Reference Explanations:
+	 0 .	 a thermometer is a kind of instrument for measuring temperature
+	 1 .	  a thermometer is used to measure temperature
+	 2 .	  instrument means tool
+Generated Explanations:
+	 0 .	 a thermometer is a kind of instrument for measuring temperature
+	 1 .	  a thermometer is used to measure temperature
+	 2 .	  instrument means tool
+Score: 0.9987314939498901
+========================================
+Question:  The Periodic Table is arranged in rows and columns. From left to right along a row, the atomic number in each column increases by 1.
+Retrieved facts:
+	 0 .	  the atomic number of elements increases by 1 from left to right on a row on the periodic table
+	 1 .	  nonmetals are found to the right of the zigzag line on the periodic table of elements
+	 2 .	  the most reactive nonmetals are located on the second column from the right side of the periodic table
+Reference Explanations:
+	 0 .	 the atomic number of elements increases by 1 from left to right on a row on the periodic table
+	 1 .	  the periodic table is arranged in rows and columns
+Generated Explanations:
+	 0 .	 the atomic number of elements increases by 1 from left to right on a row on the periodic table
+	 1 .	  the atomic number of elements increases by 1 from left to right on a row on the periodic table
+Score: 0.5193569660186768
+========================================
+Question:  When a scientist performs an experiment, there are many changes that can occur. Which observation should she list as a chemical change? The substance changed into a new substance.
+Retrieved facts:
+	 0 .	  chemical reactions cause new substances; different substances to form
+	 1 .	  performing multiple trials of the same experiment increases the likelihood of obtaining accurate experiment results
+Reference Explanations:
+	 0 .	 chemical reactions cause chemical change
+	 1 .	  chemical reactions cause new substances; different substances to form
+Generated Explanations:
+	 0 .	 a chemical reaction can cause new substances; different substances to form
+	 1 .	  chemical reactions cause chemical change
+Score: 0.7474581599235535
+========================================
+Question:  Which kind of bridge uses cables for support? a suspension bridge
+Retrieved facts:
+	 0 .	  providing support is a kind of function
+	 1 .	  An example of a suspension is oil mixed with water
+	 2 .	  a cell wall is a part of a plant cell for supporting and protecting the cell membrane
+	 3 .	  a  cell wall provides support; protection; shape; structure for  a plant cell
+	 4 .	  a plant cell is a kind of cell
+Reference Explanations:
+	 0 .	 cables are used for support by suspension bridges
+Generated Explanations:
+	 0 .	 a suspension bridge uses cables for support
+	 1 .	  a suspension bridge is a kind of bridge
+Score: 0.3746365010738373
+========================================
+Question:  Matter can undergo different changes. Which best demonstrates a chemical change? wood burning
+Retrieved facts:
+	 0 .	  fire is a kind of chemical reaction
+	 1 .	  chemical reactions cause new substances; different substances to form
+	 2 .	  combustion is a kind of chemical change
+	 3 .	  chemical reactions cause chemical change
+Reference Explanations:
+	 0 .	 wood burns
+	 1 .	  fire causes burning
+	 2 .	  fire is a kind of chemical reaction
+	 3 .	  chemical reactions cause chemical change
+Generated Explanations:
+	 0 .	 fire causes burning
+	 1 .	  fire is a kind of chemical reaction
+	 2 .	  chemical reactions cause chemical change
+Score: 0.46933722496032715
+========================================
+Question:  When notebook paper is folded to make an airplane, what physical property of the paper changes? Shape
+Retrieved facts:
+	 0 .	  paper is recyclable
+	 1 .	  crumple means change shape from smooth; flat into compacted;irregular by mechanical force; kinetic energy
+	 2 .	  shape is a property of an object
+	 3 .	  fire is a kind of chemical reaction
+	 4 .	  chemical reactions cause chemical change
+Reference Explanations:
+	 0 .	 folding an object causes that object to change shape
+	 1 .	  a paper is a kind of object
+	 2 .	  shape is a kind of physical property
+Generated Explanations:
+	 0 .	 a notebook is a kind of object
+	 1 .	  folding an object changes the shape of that object
+	 2 .	  shape is a kind of physical property
+	 3 .	  change is a kind of change
+	 4 .	  shape is a kind of physical property
+Score: 0.4088662564754486
+========================================
+Question:  Neutrons are particles of an atom that are part of the nucleus.
+Retrieved facts:
+	 0 .	  the nucleus of an atom is usually made of both protons and neutrons
+	 1 .	  neutrons add mass to the nucleus
+Reference Explanations:
+	 0 .	 neutrons are a kind of subatomic particle
+	 1 .	  the nucleus of an atom is usually made of both protons and neutrons
+	 2 .	  neutrons are a part of the nucleus
+Generated Explanations:
+	 0 .	 the nucleus of an atom is usually made of both protons and neutrons
+	 1 .	  neutrons are a part of the nucleus
+Score: 0.6108565926551819
+========================================
+Question:  Which cellular organelle uses oxygen and glucose to provide energy to the cell? mitochondrion
+Retrieved facts:
+	 0 .	  oxygen; glucose is used for providing energy to cells by mitochondrion
+	 1 .	  muscles push; pull bones to move the bones
+	 2 .	  force requires energy
+	 3 .	  cellular respiration is a source of energy for cell activities
+Reference Explanations:
+	 0 .	 a mitochondrion is a kind of cellular organelle
+	 1 .	  oxygen; glucose is used for providing energy to cells by mitochondrion
+Generated Explanations:
+	 0 .	 a mitochondrion is a kind of cellular organelle
+	 1 .	  oxygen; glucose is used for providing energy to cells by mitochondrion
+Score: 0.9826707243919373
+========================================
+Question:  The formation of an ionic bond involves the transfer of electrons.
+Retrieved facts:
+	 0 .	  carbohydrates are made of glucose molecules bonding together
+	 1 .	  carbohydrates store chemical energy
+	 2 .	  photosynthesis is a source of; makes food; energy for the plant by converting carbon dioxide, water, and sunlight into carbohydrates
+	 3 .	  many types of molecules can be formed by carbon with covalent bonds
+	 4 .	  organisms are made of carbon
+Reference Explanations:
+	 0 .	 ionic bonds are formed by electrons transferring among atoms
+Generated Explanations:
+	 0 .	 an ionic bond is formed by the transfer of electrons
+Score: 0.6671704053878784
+========================================
+Question:  Which of the following best describes the mass of a solid block of ice? the amount of matter in the block
+Retrieved facts:
+	 0 .	  mass is a measure of the amount of matter in an object
+	 1 .	  an ice cube is a kind of solid
+	 2 .	  melting means matter; a substance changes from a solid into a liquid by increasing heat energy
+	 3 .	  mass is a property of objects; matter
+	 4 .	  volume is a property of matter
+Reference Explanations:
+	 0 .	 mass is a measure of the amount of matter in an object
+	 1 .	  measuring is used for describing an object
+	 2 .	  a block is a kind of object
+Generated Explanations:
+	 0 .	 a block is a kind of object
+	 1 .	  mass is a measure of the amount of matter in an object
+Score: 0.36597874760627747
+========================================
+Question:  Which observation indicates that a chemical reaction has taken place? A new chemical substance is formed.
+Retrieved facts:
+	 0 .	  chemical reactions cause new substances; different substances to form
+	 1 .	  the cell cycle is when a cell forms new cells
+	 2 .	  rust forming is a kind of chemical change
+	 3 .	  chemical reactions cause chemical change
+Reference Explanations:
+	 0 .	 chemical reactions cause new substances; different substances to form
+Generated Explanations:
+	 0 .	 a chemical reaction causes new substances; different substances to form
+	 1 .	  chemical reactions cause chemical change
+Score: 0.7190919518470764
+========================================
+Question:  Which model can be used to trace genetic inheritance? pedigree chart
+Retrieved facts:
+	 0 .	  the Periodic Table of Elements can be used for  predicting; determining the properties of an element
+	 1 .	  a station model is used for displaying information about weather in a particular point and time
+Reference Explanations:
+	 0 .	 a pedigree chart is used for tracing genetic inheritance
+	 1 .	  a pedigree chart is a kind of model
+Generated Explanations:
+	 0 .	 a pedigree chart can be used to trace genetic inheritance
+Score: 0.5243929028511047
+========================================
+worst explanations:
+main_eval.py:208: FutureWarning: Using short name for 'orient' is deprecated. Only the options: ('dict', list, 'series', 'split', 'records', 'index') will be used in a future version. Use one of the above to silence this warning.
+  worst_explanations_dict = worst_explanations_df.to_dict("record")
+Question:  Which gas is released by producers that consumers take in to survive? oxygen
+Retrieved facts:
+	 0 .	  In the food chain process an animal has the role of  consumer which eats producers;other animals for food
+	 1 .	  green plants provide food for themselves; animals; consumers by performing photosynthesis
+	 2 .	  rabbits eat plants
+	 3 .	  green plants are a kind of producer
+	 4 .	  consumers eat other organisms
+Reference Explanations:
+	 0 .	 oxygen is a kind of gas at room temperature
+	 1 .	  plants are a source of oxygen through photosynthesis
+	 2 .	  green plants are a kind of producer
+	 3 .	  if something releases something else then that something is the source of that something else
+	 4 .	  an animal; bacterium requires oxygen for survival; to breathe
+	 5 .	  In the food chain process an animal has the role of consumer which eats producers;other animals for food
+	 6 .	  breathing is when a lung converts from oxygen in air into oxygen in blood
+	 7 .	  the lungs are a part of the body of an animal used for breathing air
+	 8 .	  to breathe in means to absorb air
+	 9 .	  take in means absorb
+Generated Explanations:
+	 0 .	 a source of something emits; produces; generates; provides that something
+	 1 .	  if something releases something else then that something is the source of that something else
+	 2 .	  oxygen is a kind of gas at room temperature
+	 3 .	  to give off means to be the source of that something
+Score: -1.0703201293945312
+========================================
+Question:  When the motion of liquid water molecules slows, what most likely happens? The liquid water forms a solid.
+Retrieved facts:
+	 0 .	  freezing means matter; a substance changes from a liquid into a solid by decreasing heat energy
+	 1 .	  phase changes change the arrangement of molecules in a substance; in a sample
+	 2 .	  as the temperature of a substance; an object decreases , the molecules in that substance will move slower; closer
+	 3 .	  condensing means matter; a substance changes from a gas into a liquid by decreasing heat energy
+	 4 .	  condensation is when matter; a substance changes from a gas into a liquid by decreasing heat energy
+Reference Explanations:
+	 0 .	 as the temperature of a substance; an object decreases the molecules in that substance will move slower; closer
+	 1 .	  cooling;colder means removing;reducing;decreasing heat;temperature
+	 2 .	  liquid water cooling causes that liquid water to freeze
+	 3 .	  freezing means matter; a substance changes from a liquid into a solid by decreasing heat energy
+	 4 .	  to change into means to form
+	 5 .	  temperature is a measure of heat energy
+	 6 .	  water is a kind of liquid at room temperature
+	 7 .	  a liquid is a kind of substance
+Generated Explanations:
+	 0 .	 a phase change is when matter; a substance changes from one state of matter into another state of matter
+Score: -1.3914170265197754
+========================================
+Question:  In a zoo located in a warm region, which should be included in the polar bear exhibit? cold-water pool
+Retrieved facts:
+	 0 .	  clouds are formed by water vapor rising into colder regions of the atmosphere and condensing
+	 1 .	  clouds are made of water vapor; rain droplets
+	 2 .	  a polar substance can dissolve in another polar substance
+	 3 .	  water is a kind of polar substance
+	 4 .	  oceans contain most of  earth's water
+Reference Explanations:
+	 0 .	 a polar bear requires a cold environment
+	 1 .	  a pool is a kind of body of water
+	 2 .	  a body of water is a kind of environment
+	 3 .	  zoo exhibits should contain all things required by the animals living in those exhibits
+	 4 .	  a bear is a kind of animal
+	 5 .	  including means containing
+	 6 .	  some animals live in zoo exhibits
+	 7 .	  temperature; heat energy is a property of objects; weather and includes ordered values of cold; cool; warm; hot
+	 8 .	  a region is similar to an environment
+Generated Explanations:
+	 0 .	 a polar substance can dissolve in another polar substance
+	 1 .	  water is a kind of liquid at room temperature
+	 2 .	  cooling;colder means removing;reducing;decreasing heat;temperature
+Score: -1.275961995124817
+========================================
+Question:  A student reaches into a bag of objects. Which property of the objects can be observed by using only the sense of touch? texture
+Retrieved facts:
+	 0 .	  feeling is when an living thing senses through touch
+	 1 .	  texture means how an object feels
+	 2 .	  the senses are used for making observations
+	 3 .	  determining often requires measuring; observing
+	 4 .	  texture is a property of  surfaces; materials; objects and includes ordered  values of smooth; rough
+Reference Explanations:
+	 0 .	 texture is a property of surfaces; materials; objects and includes ordered values of smooth; rough
+	 1 .	  touch is a kind of sense
+	 2 .	  touch can be used for detecting texture
+	 3 .	  an object has properties
+	 4 .	  detecting is similar to observing
+	 5 .	  a surface is a part of an object
+Generated Explanations:
+	 0 .	 a bag is a kind of object
+	 1 .	  the senses are used for making observations
+	 2 .	  determining often requires measuring; observing
+Score: -1.1254500150680542
+========================================
+Question:  A substance with a mass of 10 g is heated to produce two new substances. The mass of the first new substance is 9.3 g and the mass of the second new substance is 0.7 g. Which of the following is best demonstrated by this example? law of conservation of mass
+Retrieved facts:
+	 0 .	  chemical reactions cause new substances; different substances to form
+	 1 .	  temperature changing does not cause mass to change
+	 2 .	  increasing heat causes thermal expansion
+	 3 .	  mass is a property of objects; matter
+	 4 .	  An example of recycling is using an object to make a new object
+Reference Explanations:
+	 0 .	 when two or more elements; molecules combine chemically the mass of the product is equal to the combined masses of the elements or molecules
+	 1 .	  substances are made of elements
+	 2 .	  adding heat to an object sometimes causes chemical reactions
+	 3 .	  chemical reactions cause new substances; different substances to form
+Generated Explanations:
+	 0 .	 a law is a kind of body of law
+	 1 .	  mass is a property of objects; matter
+	 2 .	  objects are made of materials; substances; matter
+Score: -1.0133421421051025
+========================================
+Question:  Martin grew some bean plants. He made a list of what the bean plants needed to survive and grow. Which gas do the plants need when they make their own food? carbon dioxide
+Retrieved facts:
+	 0 .	  photosynthesis means producers; green plants convert from carbon dioxide and water and solar energy into carbohydrates and food and oxygen for themselves
+	 1 .	  In the photosynthesis process carbon dioxide; water; sunlight has the role of  raw material
+	 2 .	  if something is a raw material in a process then that something is required for that process
+	 3 .	  photosynthesis is a source of; makes food; energy for the plant by converting carbon dioxide, water, and sunlight into carbohydrates
+	 4 .	  green plants are a kind of producer
+Reference Explanations:
+	 0 .	 photosynthesis means producers; green plants convert from carbon dioxide and water and solar energy into carbohydrates and food and oxygen for themselves
+	 1 .	  In the photosynthesis process carbon dioxide; water; sunlight has the role of raw material
+	 2 .	  photosynthesis is a source of; makes food; energy for the plant by converting carbon dioxide water and sunlight into carbohydrates
+	 3 .	  if something is a raw material in a process then that something is required for that process
+	 4 .	  photosynthesis is a kind of chemical process
+	 5 .	  to depend on; to rely on; to need means to require
+	 6 .	  carbon dioxide is a kind of gas
+Generated Explanations:
+	 0 .	 a bean plant requires carbon dioxide for photosynthesis
+	 1 .	  to depend on; to rely on; to need means to require
+Score: -1.2497552633285522
+========================================
+Question:  Which describes a material that is not a food? It does not store energy or nutrients.
+Retrieved facts:
+	 0 .	  a battery contains chemical energy
+	 1 .	  a producer is a kind of living thing
+	 2 .	  photosynthesis means producers; green plants convert from carbon dioxide and water and solar energy into carbohydrates and food and oxygen for themselves
+	 3 .	  In the photosynthesis process carbon dioxide; water; sunlight has the role of  raw material
+	 4 .	  if food is not immediately used by the body for energy then that food will be stored for future use
+Reference Explanations:
+	 0 .	 food contains nutrients for living things
+	 1 .	  nutrients are a source of energy for living things
+	 2 .	  if something is a source of something else then that something usually contains that something else
+	 3 .	  contain is similar to store
+Generated Explanations:
+	 0 .	 a material that is not a food then that material does not contain nutrients or nutrients
+Score: -1.1199758052825928
+========================================
+Question:  Fruit flies reproduce by sexual reproduction. What percent of genes does a fertilized egg of a fruit fly receive from one parent? 50%
+Retrieved facts:
+	 0 .	  a sperm cell is a kind of  sex cell
+	 1 .	  an egg cell is a kind of sex cell
+	 2 .	  each sex cell provides half the number of chromosomes in a fertilized egg through sexual reproduction
+	 3 .	  fertilization is a stage in the sexual reproduction process
+	 4 .	  fertilization is not a stage in the asexual reproduction process
+Reference Explanations:
+	 0 .	 one parent is the source of 50% of the genes in a fertilized egg through sexual reproduction
+	 1 .	  if an object is a source of something for something else then that something else can obtain that something from that object
+	 2 .	  obtain is similar to receive
+Generated Explanations:
+	 0 .	 a fertilized egg of a fruit fly receives from one parent
+Score: -1.2045884132385254
+========================================
+Question:  Plants do not usually need to eat other organisms because plants turn sunlight into food energy.
+Retrieved facts:
+	 0 .	  a  plant requires sunlight for photosynthesis
+	 1 .	  solar energy is a kind of energy
+	 2 .	  photosynthesis is a source of; makes food; energy for the plant by converting carbon dioxide, water, and sunlight into carbohydrates
+	 3 .	  photosynthesis means producers; green plants convert from carbon dioxide and water and solar energy into carbohydrates and food and oxygen for themselves
+	 4 .	  green plants provide food for themselves; animals; consumers by performing photosynthesis
+Reference Explanations:
+	 0 .	 photosynthesis is a source of; makes food; energy for the plant by converting carbon dioxide water and sunlight into carbohydrates
+	 1 .	  photosynthesis means producers; green plants convert from carbon dioxide and water and solar energy into carbohydrates and food and oxygen for themselves
+	 2 .	  green plants are a kind of producer
+	 3 .	  to turn means to convert
+	 4 .	  if an organism makes food for itself then that organism does not need to eat other organisms
+	 5 .	  a plant is a kind of organism
+Generated Explanations:
+	 0 .	 a plant requires sunlight for photosynthesis
+	 1 .	  to depend on; to rely on; to need means to require
+Score: -1.3087791204452515
+========================================
+Question:  The element krypton is a gas that shows almost no chemical activity. To find another element with similar properties, what should a student look for on the Periodic Table of the Elements? an element in the same group
+Retrieved facts:
+	 0 .	  elements from the same group in the periodic table are chemically reactive in a similar way
+	 1 .	  the periodic table is systematically organized according to the structure of the atoms of the elements
+	 2 .	  elements in the same group on the Periodic Table of Elements have similar properties
+	 3 .	  an atom is a kind of object
+	 4 .	  if the elements have similar chemical reactivity , then the elements will react with other elements in a similar way
+Reference Explanations:
+	 0 .	 the elements from group 18; from noble gas family are the most unreactive elements in the periodic table
+	 1 .	  the elements from group 18; from noble gas family are the least reactive elements in the periodic table
+	 2 .	  if something is chemically unreactive then something will not show a lot of chemical activity
+	 3 .	  elements from the same group in the periodic table are chemically reactive in a similar way
+	 4 .	  chemical reactivity is a property of elements and includes ordered values of reactive; unreactive
+	 5 .	  helium; neon; argon; krypton; xenon; radon belongs to noble gases family group 18 on the periodic table
+Generated Explanations:
+	 0 .	 a chemically reactive element in the same group in the periodic table
+	 1 .	  elements in the same group on the Periodic Table of Elements have similar properties
+	 2 .	  a chemical reactivity is a kind of property
+	 3 .	  a group; family in the periodic table means a column in the periodic table
+Score: -1.147363305091858
+========================================
+Question:  Which type of relationship exists when a certain type of tree's roots need a fungus present in order to grow normally? beneficial
+Retrieved facts:
+	 0 .	  roots are a part of a plant; tree
+	 1 .	  roots are a vehicle for absorbing water and nutrients from soil into the plant
+	 2 .	  some minerals are nutrients
+	 3 .	  soil contains nutrients for plants
+	 4 .	  An example of weathering is a plant root growing into a crack in rock
+Reference Explanations:
+	 0 .	 a positive impact is a benefit
+	 1 .	  if a living thing requires something then that something has a positive impact on that living thing
+	 2 .	  roots are a part of a plant; tree
+	 3 .	  a tree is a kind of plant
+	 4 .	  a plant is a kind of living thing
+	 5 .	  to depend on; to rely on; to need means to require
+Generated Explanations:
+	 0 .	 a fungus is a kind of living thing
+	 1 .	  roots are a part of a plant; tree
+	 2 .	  a tree is a kind of plant
+	 3 .	  a type is synonymous with a kind
+Score: -1.0327280759811401
+========================================
+Question:  Scott was looking at the results of a cross between red and white flowers. Which is the most likely result of a cross that demonstrates incomplete dominance? 100% pink flowers
+Retrieved facts:
+	 0 .	  incomplete dominance is when offspring exhibit a combination of a property caused by the genes of its parents
+	 1 .	  pink is a combination of red and white
+	 2 .	  color is a property of  an object; a material
+	 3 .	  genes are able to determine the inherited characteristics of a living thing
+	 4 .	  the colors of parts of an organism are inherited characteristics
+Reference Explanations:
+	 0 .	 incomplete dominance is when offspring exhibit a combination of a property caused by the genes of its parents
+	 1 .	  genes are able to determine the inherited characteristics of a living thing
+	 2 .	  the colors of parts of an organism are inherited characteristics
+	 3 .	  pink is a combination of red and white
+	 4 .	  red is a kind of color
+	 5 .	  pink is a kind of color
+	 6 .	  white is a kind of color
+	 7 .	  a flower is a kind of plant
+	 8 .	  a plant is a kind of organism
+	 9 .	  an organism is a living thing
+	 10 .	  characteristic means property
+	 11 .	  to cause means to result in
+	 12 .	  cross-pollination is a stage in the sexual reproduction process of plants
+	 13 .	  offspring receive genes from their parents through inheritence; DNA; sexual reproduction
+	 14 .	  to demonstrate means to exhibit
+	 15 .	  determine is similar to cause
+Generated Explanations:
+	 0 .	 a cross is a kind of event
+	 1 .	  events occur at a specific place; at a specific time; with a specific frequency
+	 2 .	  to cause means to result in
+Score: -1.468826413154602
+========================================
+Question:  There are different types of desert. What do they all have in common? low rainfall
+Retrieved facts:
+	 0 .	  solar energy is a renewable; inexhaustible resource
+	 1 .	  a desert environment usually has a lot of sunlight
+	 2 .	  sunlight is a kind of solar energy
+	 3 .	  lack of moisture in the air causes low amounts of rainfall
+	 4 .	  a warm front is when warm air mass rises and passes over; collides a cold air mass
+Reference Explanations:
+	 0 .	 a desert environment receives low rainfall
+Generated Explanations:
+	 0 .	 a desert is a kind of environment
+	 1 .	  an environment is similar to an ecosystem
+	 2 .	  a desert is a kind of environment
+Score: -1.0024338960647583
+========================================
+Question:  One example of matter is water
+Retrieved facts:
+	 0 .	  water is a kind of substance
+	 1 .	  substances are made of matter
+	 2 .	  temperature changing can cause phase changes
+	 3 .	  a phase change is when matter; a substance changes from one state of matter into another state of matter
+	 4 .	  boiling;evaporation means matter; a substance changes from a liquid into a gas by increasing heat energy
+Reference Explanations:
+	 0 .	 water is a kind of substance
+	 1 .	  substances are made of matter
+Generated Explanations:
+	 0 .	 a phase change is when matter; a substance changes from one state of matter into another state of matter
+Score: -0.9913111329078674
+========================================
+Question:  Which action does a kitten learn from its mother? how to hunt mice
+Retrieved facts:
+	 0 .	  skills are learned characteristics; behaviors
+	 1 .	  hunting; scavenging is a kind of skill
+	 2 .	  skills often require practice
+	 3 .	  following orders is a learned characteristic
+	 4 .	  an instinctive behavior is a kind of inherited characteristic; behavioral adaptation
+Reference Explanations:
+	 0 .	 hunting; scavenging is a kind of skill
+	 1 .	  skills are learned characteristics; behaviors
+	 2 .	  hunting is a kind of action
+	 3 .	  actions mean behavior
+Generated Explanations:
+	 0 .	 a kitten is a kind of animal
+	 1 .	  an animal is a kind of living thing
+	 2 .	  trait is synonymous with characteristic
+	 3 .	  a living thing is a kind of object
+	 4 .	  how to do is a kind of action
+Score: -0.9819275140762329
+========================================
+==========================================================
+sys:1: FutureWarning: In a future version of pandas all arguments of read_csv except for the argument 'filepath_or_buffer' will be keyword-only
