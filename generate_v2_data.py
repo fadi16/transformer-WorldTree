@@ -12,6 +12,18 @@ import pickle
 
 facts_dict = {}
 
+explanatory_role_to_sep = {
+    "CENTRAL": " && ",
+    "GROUNDING": " $$ ",
+    "BACKGROUND": " $$ ",
+    "LEXGLUE": " %% "
+}
+
+CENTRAL = "CENTRAL"
+GROUNDING = "GROUNDING"
+BACKGROUND = "BACKGROUND"
+LEXGLUE = "LEXGLUE"
+
 
 def display_df(df):
     table = Table(
@@ -143,6 +155,103 @@ def construct_data_table(data_json, hypotheses_json):
     return data_table, questions_missing_hypothesis
 
 
+def construct_data_table_with_explanatory_role_chains(data_json, hypotheses_json):
+    question_id_and_answer_key_to_hypothesis = json_to_dict(hypotheses_json)
+    questions_missing_hypothesis = []
+
+    data = json_to_dict(data_json)
+    data_table = []  # 4D array, containing question id, question&answer, hypothesis, explanations, topics, major topic
+
+    for question_id in data.keys():
+        question_data = data[question_id]
+        question = question_data["question"]
+        answer = question_data["answer"]
+        question_topics = ",".join(topics for topics in question_data["topic"])
+        major_question_topic = get_major_topic_from_topics(question_topics)
+        question_and_answer = question + " " + answer
+        answer_key = question_data["answerKey"]
+        try:
+            hypothesis = question_id_and_answer_key_to_hypothesis[question_id][answer_key]
+        except KeyError:
+            hypothesis = question_and_answer
+            questions_missing_hypothesis.append(question_id)
+
+        fact_ids_list = []
+        fact_explanatory_roles = []
+        for id, role in question_data["explanation"].items():
+            fact_ids_list.append(id)
+            fact_explanatory_roles.append(role)
+
+        explanations_list, explanation_types = get_explanations_and_explanations_types_list(fact_ids_list)
+
+        question_and_answer_for_central = question_and_answer + explanatory_role_to_sep[CENTRAL]
+        hypothesis_for_central = hypothesis + explanatory_role_to_sep[CENTRAL]
+        central_explanations = [explanations_list[i] for i in range(len(explanations_list)) if
+                                fact_explanatory_roles[i] == CENTRAL]
+        central_explanations_str = explanatory_role_to_sep[CENTRAL].join(central_explanations)
+        central_explanation_types = [explanation_types[i] for i in range(len(explanation_types)) if
+                                     fact_explanatory_roles[i] == CENTRAL]
+        central_explanation_types_str = explanatory_role_to_sep[CENTRAL].join(central_explanation_types)
+        data_table.append(
+            [
+                question_id,
+                question_and_answer_for_central,
+                hypothesis_for_central,
+                central_explanations_str,
+                central_explanation_types_str,
+                question_topics,
+                major_question_topic
+            ]
+        )
+
+        question_and_answer_for_grounding = question_and_answer_for_central + central_explanations_str + \
+                                            explanatory_role_to_sep[GROUNDING]
+        hypothesis_for_grounding = hypothesis_for_central + central_explanations_str + explanatory_role_to_sep[
+            GROUNDING]
+        grounding_explanations = [explanations_list[i] for i in range(len(explanations_list)) if
+                                  fact_explanatory_roles[i] == GROUNDING or fact_explanatory_roles[i] == BACKGROUND]
+        grounding_explanations_str = explanatory_role_to_sep[GROUNDING].join(grounding_explanations)
+        grounding_explanation_types = [explanation_types[i] for i in range(len(explanation_types)) if
+                                       fact_explanatory_roles[i] == GROUNDING or fact_explanatory_roles[
+                                           i] == BACKGROUND]
+        grounding_explanation_types_str = explanatory_role_to_sep[GROUNDING].join(grounding_explanation_types)
+        data_table.append(
+            [
+                question_id,
+                question_and_answer_for_grounding,
+                hypothesis_for_grounding,
+                grounding_explanations_str,
+                grounding_explanation_types_str,
+                question_topics,
+                major_question_topic
+            ]
+        )
+
+        question_and_answer_for_lexglue = question_and_answer_for_grounding + grounding_explanations_str + \
+                                          explanatory_role_to_sep[LEXGLUE]
+        hypothesis_for_lexglue = hypothesis_for_grounding + grounding_explanations_str + explanatory_role_to_sep[
+            LEXGLUE]
+        lexglue_explanations = [explanations_list[i] for i in range(len(explanations_list)) if
+                                fact_explanatory_roles[i] == LEXGLUE]
+        lexglue_explanations_str = explanatory_role_to_sep[LEXGLUE].join(lexglue_explanations)
+        lexglue_explanation_types = [explanation_types[i] for i in range(len(explanation_types)) if
+                                     fact_explanatory_roles[i] == LEXGLUE]
+        lexglue_explanation_types_str = explanatory_role_to_sep[LEXGLUE].join(lexglue_explanation_types)
+        data_table.append(
+            [
+                question_id,
+                question_and_answer_for_lexglue,
+                hypothesis_for_lexglue,
+                lexglue_explanations_str,
+                lexglue_explanation_types_str,
+                question_topics,
+                major_question_topic
+            ]
+        )
+
+    return data_table, questions_missing_hypothesis
+
+
 if __name__ == "__main__":
     columns = ["question_id", "question_and_answer", "hypothesis", "explanation", "explanation_type", "question_topics",
                "major_question_topic"]
@@ -153,18 +262,33 @@ if __name__ == "__main__":
     # dev data
     dev_table, questions_misssing_hypo = construct_data_table("./data/v2-proper-data/dev_set_shared.json",
                                                               "./data/v2-proper-data/hypothesis_dev_v2.json")
+    dev_table_chains, _ = construct_data_table_with_explanatory_role_chains("./data/v2-proper-data/dev_set_shared.json",
+                                                                            "./data/v2-proper-data/hypothesis_dev_v2.json")
+
     reduced_dev_table = dev_table[:-200]
+    reduced_dev_table_chains = dev_table_chains[:-200]
 
     df = pd.DataFrame(data=reduced_dev_table, columns=columns)
     df.to_csv("./data/v2-proper-data/dev_data_wed.csv", sep="\t")
+    df_chains = pd.DataFrame(data=reduced_dev_table_chains, columns=columns)
+    df_chains.to_csv("./data/v2-proper-data/dev_data_wed_chains.csv", sep="\t")
 
     # training data
     train_table, questions_misssing_hypo = construct_data_table("./data/v2-proper-data/train_set_shared.json",
                                                                 "./data/v2-proper-data/hypothesis_train_v2.json")
+    train_table_chains, _ = construct_data_table_with_explanatory_role_chains(
+        "./data/v2-proper-data/train_set_shared.json",
+        "./data/v2-proper-data/hypothesis_train_v2.json")
     df = pd.DataFrame(data=train_table, columns=columns)
     df.to_csv("./data/v2-proper-data/train_data_wed.csv", sep="\t")
+    df_chains = pd.DataFrame(data=train_table_chains, columns=columns)
+    df_chains.to_csv("./data/v2-proper-data/train_data_wed_chains.csv", sep="\t")
 
     # testing data
     test_table = dev_table[-200:]
+    test_table_chains = dev_table_chains[-200:]
+
     df = pd.DataFrame(data=test_table, columns=columns)
     df.to_csv("./data/v2-proper-data/test_data_wed.csv", sep="\t")
+    df_chains = pd.DataFrame(data=test_table_chains, columns=columns)
+    df_chains.to_csv("./data/v2-proper-data/test_data_wed_chains.csv", sep="\t")
