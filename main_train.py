@@ -5,16 +5,25 @@ from retrieve_prompt_generate import retrieve
 
 if __name__ == "__main__":
     ####################### CHANGE AS APPROPRRIATE #######################
-    path_train = "./data/v2-proper-data/train_data_wed.csv"
-    path_dev = "./data/v2-proper-data/dev_data_wed.csv"
-    chosen_model_params = bart_model_params
+    chosen_model_params = bart_chain_model_params
+    print(chosen_model_params)
     ######################################################################
+
+    if chosen_model_params[CHAIN]:
+        path_train = "./data/v2-proper-data/train_data_wed_chains.csv"
+        path_dev = "./data/v2-proper-data/dev_data_wed_chains.csv"
+        path_dev2 = "./data/v2-proper-data/dev_data_wed.csv"
+    else:
+        path_train = "./data/v2-proper-data/train_data_wed.csv"
+        path_dev = "./data/v2-proper-data/dev_data_wed.csv"
 
     df_train = pd.read_csv(path_train, delimiter="\t")
     print(df_train.head())
 
     df_dev = pd.read_csv(path_dev, delimiter="\t")
     print(df_dev.head())
+
+    df_dev2 = pd.read_csv(path_dev2, delimiter="\t") if chosen_model_params[CHAIN] else None
 
     if chosen_model_params[AUGMENT_INPUT_WITH_RETRIEVED_FACTS]:
         print("USING RETRIEVAL METHOD")
@@ -33,6 +42,7 @@ if __name__ == "__main__":
     trainer(
         train_set=df_train,
         dev_set=df_dev,
+        dev_set2=df_dev2,
         source_text=chosen_model_params[TRAIN_ON],
         target_text="explanation",
         model_params=chosen_model_params,

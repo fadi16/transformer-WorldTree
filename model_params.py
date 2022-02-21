@@ -15,6 +15,7 @@ QUESTION_AND_ANSWER = "question_and_answer"
 HYPOTHESIS = "hypothesis"
 TRAIN_ON = "TRAIN_ON"
 ONLY_CETRAL = "ONLY_CETRAL"
+CHAIN = "CHAIN"
 
 t5_model_params = {
     "MODEL": "t5-base",
@@ -30,7 +31,8 @@ t5_model_params = {
     "NO_SIMILAR_HYPOTHESIS": 3,
     "NO_FACTS_TO_RETRIEVE": 5,
     "ONLY_CETRAL": True,
-    "TRAIN_ON": QUESTION_AND_ANSWER
+    "TRAIN_ON": QUESTION_AND_ANSWER,
+    "CHAIN": False
 }
 
 bart_model_params = {
@@ -47,5 +49,25 @@ bart_model_params = {
     "NO_SIMILAR_HYPOTHESIS": 20,
     "NO_FACTS_TO_RETRIEVE": 6,
     "ONLY_CETRAL": True,
-    "TRAIN_ON": QUESTION_AND_ANSWER
+    "TRAIN_ON": QUESTION_AND_ANSWER,
+    "CHAIN": False
 }
+
+bart_chain_model_params = {
+    "MODEL": "facebook/bart-base",
+    "TRAIN_BATCH_SIZE": 3,
+    "VALID_BATCH_SIZE": 3,
+    "TRAIN_EPOCHS": 10,
+    "VAL_EPOCHS": 1,
+    "LEARNING_RATE": 3e-5,
+    "MAX_SOURCE_TEXT_LENGTH": 256,
+    "MAX_TARGET_TEXT_LENGTH": 256,
+    "SEED": 42,
+    "AUGMENT_INPUT_WITH_RETRIEVED_FACTS": False,
+    "NO_SIMILAR_HYPOTHESIS": 0,
+    "NO_FACTS_TO_RETRIEVE": 0,
+    "ONLY_CETRAL": False,
+    "TRAIN_ON": QUESTION_AND_ANSWER,
+    "CHAIN": True
+}
+

@@ -189,6 +189,9 @@ def construct_data_table_with_explanatory_role_chains(data_json, hypotheses_json
         central_explanations = [explanations_list[i] for i in range(len(explanations_list)) if
                                 fact_explanatory_roles[i] == CENTRAL]
         central_explanations_str = explanatory_role_to_sep[CENTRAL].join(central_explanations)
+        if not central_explanations_str:
+            central_explanations_str = " "
+
         central_explanation_types = [explanation_types[i] for i in range(len(explanation_types)) if
                                      fact_explanatory_roles[i] == CENTRAL]
         central_explanation_types_str = explanatory_role_to_sep[CENTRAL].join(central_explanation_types)
@@ -211,6 +214,8 @@ def construct_data_table_with_explanatory_role_chains(data_json, hypotheses_json
         grounding_explanations = [explanations_list[i] for i in range(len(explanations_list)) if
                                   fact_explanatory_roles[i] == GROUNDING or fact_explanatory_roles[i] == BACKGROUND]
         grounding_explanations_str = explanatory_role_to_sep[GROUNDING].join(grounding_explanations)
+        if not grounding_explanations_str:
+            grounding_explanations_str = " "
         grounding_explanation_types = [explanation_types[i] for i in range(len(explanation_types)) if
                                        fact_explanatory_roles[i] == GROUNDING or fact_explanatory_roles[
                                            i] == BACKGROUND]
@@ -234,6 +239,8 @@ def construct_data_table_with_explanatory_role_chains(data_json, hypotheses_json
         lexglue_explanations = [explanations_list[i] for i in range(len(explanations_list)) if
                                 fact_explanatory_roles[i] == LEXGLUE]
         lexglue_explanations_str = explanatory_role_to_sep[LEXGLUE].join(lexglue_explanations)
+        if not lexglue_explanations_str:
+            lexglue_explanations_str = " "
         lexglue_explanation_types = [explanation_types[i] for i in range(len(explanation_types)) if
                                      fact_explanatory_roles[i] == LEXGLUE]
         lexglue_explanation_types_str = explanatory_role_to_sep[LEXGLUE].join(lexglue_explanation_types)

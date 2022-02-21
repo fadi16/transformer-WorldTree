@@ -19,7 +19,6 @@ from nltk.stem.porter import PorterStemmer
 ###############################################
 DEV_PREDICTIONS_CSV_PATH = "evaluation/BART-retrieve-prompt/test_predictions_vs_actuals_no_rep_with_bleurt_scores.csv"  # "evaluation/t5-plain/validation_predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-t5-plain-from-hypothesis-with-data-splitting.csv"
 # DEV_PREDICTIONS_CSV_PATH = "evaluation/t5-plain/validation_predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting_with_BLEURT_scores.csv"  # "evaluation/t5-plain/validation_predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-t5-plain-from-hypothesis-with-data-splitting.csv"
-
 TRAINING_DATA_CSV_PATH = "data/v2-proper-data/train_data_wed.csv"
 
 num_of_best_worst_explanations = 15
@@ -530,6 +529,7 @@ def get_generated_no_exact_repeated_facts(generated_text_with_separators):
         facts_no_rep = []
         facts = generated_exp.split("$$")
         for fact in facts:
+            fact = fact.strip()
             if fact not in facts_no_rep:
                 facts_no_rep.append(fact)
             else:
@@ -556,11 +556,11 @@ def preprocess_predictions_df(df):
     for x in df["Generated Text"]:
         generated_text_with_separator.append(
             x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", "").replace(
-                "<|endoftext|>", ""))
+                "<|endoftext|>", "").replace("%%", "$$").replace("&&", "$$").replace("||", "$$"))
     for x in df["Actual Text"]:
         reference_text_with_separator.append(
             x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", "").replace(
-                "<|endoftext|>", ""))
+                "<|endoftext|>", "").replace("%%", "$$").replace("&&", "$$").replace("||", "$$"))
     for x in df["Questions"]:
         questions_and_answers_with_separator.append(x)
         if "@@" in x:
@@ -569,11 +569,11 @@ def preprocess_predictions_df(df):
 
     # without separator
     for x in generated_text_with_separator:
-        no_explanations_generated.append(x.count("$$") + 1)
-        generated_text.append(x.replace("$$", "."))
+        no_explanations_generated.append(x.count("$$") + x.count("%%") + x.count("&&") + x.count("||") + 1)
+        generated_text.append(x.replace("$$", ".").replace("%%", ".").replace("&&", ".").replace("||", "."))
     for x in reference_text_with_separator:
-        no_explanations_reference.append(x.count("$$") + 1)
-        reference_text.append(x.replace("$$", "."))
+        no_explanations_reference.append(x.count("$$") + x.count("%%") + x.count("&&") + x.count("||") + 1)
+        reference_text.append(x.replace("$$", ".").replace("%%", ".").replace("&&", ".").replace("||", "."))
 
     generated_text_with_no_exact_repetitions, no_repeated_to_no_generated_ratio = get_generated_no_exact_repeated_facts(
         generated_text_with_separator)
