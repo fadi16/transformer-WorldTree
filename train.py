@@ -143,13 +143,6 @@ def trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, dev_set2: pd.DataFra
 
     best_val_score = -1
 
-
-    # todo : remove this after debugging
-    validate_with_chains(epoch=0, tokenizer=tokenizer, model=model, device=device, loader=validation_loader2, model_params=model_params)
-
-
-    ########### todo mode work needed here
-
     for training_epoch in range(model_params[TRAIN_EPOCHS]):
         print("STARTING TRAINING EPOCH: " + str(training_epoch) + "\n")
         loss = train_step(epoch=training_epoch,
