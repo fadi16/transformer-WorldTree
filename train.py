@@ -195,9 +195,12 @@ def trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, dev_set2: pd.DataFra
                 _, _, reference_text, _, _, _, generated_text_with_no_exact_repetitions, _, _, _ = preprocess_predictions_df(
                     df=df)
 
+                chain_questions_and_answers = val_dataset[source_text]
                 # for central
                 central_ref = [reference_text[i] for i in range(len(reference_text)) if i % 3 == 0]
                 central_gen = [generated_text_with_no_exact_repetitions[i] for i in range(len(generated_text_with_no_exact_repetitions)) if i % 3 == 0]
+                central_questions = [chain_questions_and_answers[i] for i in range(len(chain_questions_and_answers)) if i % 3 == 0]
+
                 _, central_eval_score, _, _ = evaluate(metric_key="bleurt",
                                                         generated=central_gen,
                                                         references=central_ref,
@@ -205,10 +208,18 @@ def trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, dev_set2: pd.DataFra
                                                         best_and_worst=False)
                 print("central_bleurt_score = ", central_eval_score)
                 tb.add_scalar("central_bleurt_score", central_eval_score, training_epoch)
+                central_df = pd.DataFrame({
+                    "Questions": central_questions,
+                    "Generated Text": central_gen,
+                    "Actual Text": central_ref
+                })
+                central_df.to_csv("central_predictions.csv")
+
 
                 # for grounding
                 grounding_ref = [reference_text[i] for i in range(len(reference_text)) if i % 3 == 1]
                 grounding_gen = [generated_text_with_no_exact_repetitions[i] for i in range(len(generated_text_with_no_exact_repetitions)) if i % 3 == 1]
+                grounding_questions = [chain_questions_and_answers[i] for i in range(len(chain_questions_and_answers)) if i % 3 == 1]
                 _, grounding_eval_score, _, _ = evaluate(metric_key="bleurt",
                                                         generated=grounding_gen,
                                                         references=grounding_ref,
@@ -216,10 +227,17 @@ def trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, dev_set2: pd.DataFra
                                                         best_and_worst=False)
                 print("grounding_bleurt_score = ", grounding_eval_score)
                 tb.add_scalar("grounding_bleurt_score", grounding_eval_score, training_epoch)
+                grounding_df = pd.DataFrame({
+                    "Questions": grounding_questions,
+                    "Generated Text": grounding_gen,
+                    "Actual Text": grounding_ref
+                })
+                grounding_df.to_csv("grounding_predictions.csv")
 
                 # for lexglue
                 lexglue_ref = [reference_text[i] for i in range(len(reference_text)) if i % 3 == 2]
                 lexglue_gen = [generated_text_with_no_exact_repetitions[i] for i in range(len(generated_text_with_no_exact_repetitions)) if i % 3 == 2]
+                lexglue_questions = [chain_questions_and_answers[i] for i in range(len(chain_questions_and_answers)) if i % 3 == 2]
                 _, lexglue_eval_score, _, _ = evaluate(metric_key="bleurt",
                                                         generated=lexglue_gen,
                                                         references=lexglue_ref,
@@ -228,6 +246,12 @@ def trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, dev_set2: pd.DataFra
                 print("lexglue_bleurt_score = ", lexglue_eval_score)
                 tb.add_scalar("lexglue_bleurt_score", lexglue_eval_score, training_epoch)
 
+                lexglue_df = pd.DataFrame({
+                    "Questions": lexglue_questions,
+                    "Generated Text": lexglue_gen,
+                    "Actual Text": lexglue_ref
+                })
+                lexglue_df.to_csv("lexglue_predictions.csv")
 
 
             else:

@@ -77,8 +77,11 @@ def validate_with_chains(epoch, tokenizer, model, device, loader, model_params):
                 tokenizer=tokenizer,
                 max_len=model_params[MAX_SOURCE_TEXT_LENGTH],
                 sources_before=input,
-                generated_before=["", "", ""],
+                generated_before=["" for _ in range(len(input))],
                 separator=explanatory_role_to_sep[CENTRAL])
+            central_source_ids = central_source_ids.to(device, dtype=torch.long)
+            central_source_mask = central_source_mask.to(device, dtype=torch.long)
+
 
             central_generated_ids = model.generate(
                 input_ids=central_source_ids,
@@ -99,6 +102,8 @@ def validate_with_chains(epoch, tokenizer, model, device, loader, model_params):
                 sources_before=central_sources,
                 generated_before=central_generated,
                 separator=explanatory_role_to_sep[GROUNDING])
+            grounding_source_ids = grounding_source_ids.to(device, dtype=torch.long)
+            grounding_source_mask = grounding_source_mask.to(device, dtype=torch.long)
 
             grounding_generated_ids = model.generate(
                 input_ids=grounding_source_ids,
@@ -119,6 +124,8 @@ def validate_with_chains(epoch, tokenizer, model, device, loader, model_params):
                 sources_before=grounding_sources,
                 generated_before=grounding_generated,
                 separator=explanatory_role_to_sep[LEXGLUE])
+            lexglue_source_ids = lexglue_source_ids.to(device, dtype=torch.long)
+            lexglue_source_mask = lexglue_source_mask.to(device, dtype=torch.long)
 
             lexglue_generated_generated_ids = model.generate(
                 input_ids=lexglue_source_ids,

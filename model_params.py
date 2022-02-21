@@ -55,8 +55,8 @@ bart_model_params = {
 
 bart_chain_model_params = {
     "MODEL": "facebook/bart-base",
-    "TRAIN_BATCH_SIZE": 3,
-    "VALID_BATCH_SIZE": 3,
+    "TRAIN_BATCH_SIZE": 6,
+    "VALID_BATCH_SIZE": 6,
     "TRAIN_EPOCHS": 10,
     "VAL_EPOCHS": 1,
     "LEARNING_RATE": 3e-5,
