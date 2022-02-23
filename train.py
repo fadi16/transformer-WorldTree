@@ -30,22 +30,6 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
 
     tb = SummaryWriter()
 
-    print("LOADING MODEL ...\n")
-
-    if "bart" in model_params[MODEL]:
-        # BART tokenizer
-        tokenizer = BartTokenizer.from_pretrained(model_params[MODEL])
-
-        # BART model for conditional generation
-        model = BartForConditionalGeneration.from_pretrained(model_params[MODEL])
-        print("***************** TRAINING BART *******************")
-    else:  # T5
-        # t5-plain tokenizer
-        tokenizer = T5Tokenizer.from_pretrained(model_params[MODEL])
-        # t5-plain model for conditional generation
-        model = T5ForConditionalGeneration.from_pretrained(model_params[MODEL])
-        print("***************** TRAINING T5 *******************")
-
     # send to GPU/TPU
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("USING DEVICE " + device)
