@@ -3,16 +3,16 @@ import heapq
 from typing import List
 
 import nltk
+
 nltk.download('stopwords')
-#nltk.download("punc")
+# nltk.download("punc")
 import pandas as pd
 import numpy as np
 from datasets import load_metric
 import matplotlib.pyplot as plt
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
-
-
+from nltk.tokenize import RegexpTokenizer
 
 ###############################################
 ## todo: change file path
@@ -24,11 +24,28 @@ TRAINING_DATA_CSV_PATH = "data/v2-proper-data/train_data_wed.csv"
 num_of_best_worst_explanations = 15
 STOP_WORDS = stopwords.words("english")
 ###############################################
-BLERT_SCORES = "bleurt_scores"
+BLEURT_SCORES = "bleurt_scores"
 FIGURE_COUNTER = 0
 
 stemmer = PorterStemmer()
+# tokenizer to only allow alpha-neumeric characters
+regexp_tokenizer = RegexpTokenizer(r'\w+')
 bleurt_metric = None
+
+MAIN_FACTS_SEP = "$$"
+EXPLANATORY_ROLES_FACTS_SEP = "||"
+CENTRAL_FACTS_SEP = "&&"
+GROUNDING_FACTS_SEP = "$$"
+BACKGROUND_FACTS_SEP = "$$"
+LEXGLUE_FACTS_SEP = "%%"
+QUESTION_AND_RETRIEVED_FACTS_SEP = "@@"
+RETRIEVED_FACTS_SEP = "££"
+
+ALL_FACTS_SEPARATORS = {
+    MAIN_FACTS_SEP, EXPLANATORY_ROLES_FACTS_SEP, CENTRAL_FACTS_SEP,
+    GROUNDING_FACTS_SEP, BACKGROUND_FACTS_SEP, LEXGLUE_FACTS_SEP,
+    QUESTION_AND_RETRIEVED_FACTS_SEP, RETRIEVED_FACTS_SEP
+}
 
 
 def show_plots():
@@ -212,11 +229,96 @@ def evaluate(metric_key: str, questions, references, generated, best_and_worst=T
 
 
 def get_bow_of_fact(fact):
+    tokenized_fact = regexp_tokenizer.tokenize(fact)
     return set(
-        stemmer.stem(word.lower().strip()) for word in fact.split() if
-        #word.lower().strip() for word in fact.split() if
+        stemmer.stem(word.lower().strip()) for word in tokenized_fact if
         word.lower().strip() not in STOP_WORDS and word != "" and not word.isspace()
     )
+
+
+def no_facts_in_reference_vs_no_facts_in_generated(references_with_separator, generated_with_separator,
+                                                   show_total_no_generated_facts=True,
+                                                   show_no_generated_facts_in_reference=True,
+                                                   show_no_repeatedly_generated_facts=True):
+    # repeated facts are only counted once
+    NO_FACTS_OCCURRING_IN_REF = "no_facts_occurring_in_reference"
+    NO_REPEATED_FACTS = "no_repeated_facts"
+    NO_GENERATED_FACTS = "no_generated_facts"
+    MEAN_NO_FACTS_OCCURRING_IN_REF = "mean_no_facts_occurring_in_reference"
+    MEAN_NO_REPEATED_FACTS = "mean_no_repeated_facts"
+    MEAN_NO_GENERATED_FACTS = "mean_no_generated_facts"
+
+    no_reference_facts_to_stats = {}
+
+    for i in range(len(references_with_separator)):
+        reference_facts = references_with_separator[i].split(MAIN_FACTS_SEP)
+        reference_facts_bows = [get_bow_of_fact(ref_fact) for ref_fact in reference_facts]
+
+        generated_facts = generated_with_separator[i].split(MAIN_FACTS_SEP)
+        generated_facts_bows = [get_bow_of_fact(gen_fact) for gen_fact in generated_facts]
+
+        # calculate number of repeated generated facts
+        unique_gen_facts_bows = []
+        for gen_fact_bow in generated_facts_bows:
+            if gen_fact_bow not in unique_gen_facts_bows:
+                unique_gen_facts_bows.append(gen_fact_bow)
+
+        no_gen_facts_in_ref = 0
+        for gen_fact_bow in unique_gen_facts_bows:
+            if gen_fact_bow in reference_facts_bows:
+                no_gen_facts_in_ref += 1
+
+        no_repeated_gen_facts = len(generated_facts_bows) - len(unique_gen_facts_bows)
+        no_generated_facts = len(generated_facts)
+
+        no_reference_facts = len(reference_facts)
+
+        if no_reference_facts in no_reference_facts_to_stats:
+            no_reference_facts_to_stats[no_reference_facts][NO_FACTS_OCCURRING_IN_REF].append(no_gen_facts_in_ref)
+            no_reference_facts_to_stats[no_reference_facts][NO_REPEATED_FACTS].append(no_repeated_gen_facts)
+            no_reference_facts_to_stats[no_reference_facts][NO_GENERATED_FACTS].append(no_generated_facts)
+        else:
+            no_reference_facts_to_stats[no_reference_facts] = {
+                NO_FACTS_OCCURRING_IN_REF: [no_gen_facts_in_ref],
+                NO_REPEATED_FACTS: [no_repeated_gen_facts],
+                NO_GENERATED_FACTS: [no_generated_facts]
+            }
+
+    for k in no_reference_facts_to_stats.keys():
+        no_reference_facts_to_stats[k][MEAN_NO_FACTS_OCCURRING_IN_REF] = np.mean(
+            no_reference_facts_to_stats[k][NO_FACTS_OCCURRING_IN_REF])
+        no_reference_facts_to_stats[k][MEAN_NO_REPEATED_FACTS] = np.mean(
+            no_reference_facts_to_stats[k][NO_REPEATED_FACTS])
+        no_reference_facts_to_stats[k][MEAN_NO_GENERATED_FACTS] = np.mean(
+            no_reference_facts_to_stats[k][NO_GENERATED_FACTS])
+
+    reference_facts_numbers = sorted(list(no_reference_facts_to_stats.keys()))
+    no_gen_facts_occurring_in_ref_mean = [no_reference_facts_to_stats[n][MEAN_NO_FACTS_OCCURRING_IN_REF] for n in
+                                          reference_facts_numbers]
+    no_repeated_gen_facts = [no_reference_facts_to_stats[n][MEAN_NO_REPEATED_FACTS] for n in reference_facts_numbers]
+    no_gen_facts = [no_reference_facts_to_stats[n][MEAN_NO_GENERATED_FACTS] for n in reference_facts_numbers]
+
+    figure = get_figure()
+
+    if show_no_generated_facts_in_reference:
+        plt.plot(reference_facts_numbers, no_gen_facts_occurring_in_ref_mean, marker="o", linestyle="dashed",
+                 label="No. Generated Facts Occurring in Reference")
+    if show_no_repeatedly_generated_facts:
+        plt.plot(reference_facts_numbers, no_repeated_gen_facts, marker="o", linestyle="solid",
+                 label="No. Repeated Generated Facts")
+    if show_total_no_generated_facts:
+        plt.plot(reference_facts_numbers, no_gen_facts, marker="o", linestyle="solid",
+                 label="Total No. Generated Facts")
+
+    plt.plot(reference_facts_numbers, reference_facts_numbers, label="best case")
+
+    plt.legend(loc="upper left")
+    plt.title("No. Reference Facts vs Generated Facts statistics")
+    plt.xlabel("no. reference facts")
+    plt.ylabel("no. generated facts")
+    figure.show()
+
+    return no_reference_facts_to_stats
 
 
 # 2 facts are the same if their BOWs without stopwords are the same
@@ -224,8 +326,10 @@ def no_generated_facts_vs_no_facts_in_ref_and_no_repeated_facts(references_with_
     # repeated facts are only counted once
     NO_FACTS_OCCURRING_IN_REF = "no_facts_occurring_in_reference"
     NO_REPEATED_FACTS = "no_repeated_facts"
+    NO_GENERATED_FACTS = "no_generated_facts"
     MEAN_NO_FACTS_OCCURRING_IN_REF = "mean_no_facts_occurring_in_reference"
     MEAN_NO_REPEATED_FACTS = "mean_no_repeated_facts"
+    MEAN_NO_GENERATED_FACTS = "mean_no_generated_facts"
 
     no_gen_facts_to_stats = {}
 
@@ -290,9 +394,6 @@ def jaccard_similarity(s1, s2):
     """
     J(A, B) = |A intersection B| / (|A| + |B| - |A intersection B|)
     """
-    s1 = s1.replace(";", " ").replace(".", " ")
-    s2 = s2.replace(";", " ").replace(".", " ")
-
     s1_bow = get_bow_of_fact(s1)
     s2_bow = get_bow_of_fact(s2)
 
@@ -556,11 +657,11 @@ def preprocess_predictions_df(df):
     for x in df["Generated Text"]:
         generated_text_with_separator.append(
             x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", "").replace(
-                "<|endoftext|>", "").replace("%%", "$$").replace("&&", "$$").replace("||", "$$"))
+                "<|endoftext|>", "").replace("%%", "$$").replace("&&", "$$").replace("||", "$$").replace(";", " "))
     for x in df["Actual Text"]:
         reference_text_with_separator.append(
             x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", "").replace(
-                "<|endoftext|>", "").replace("%%", "$$").replace("&&", "$$").replace("||", "$$"))
+                "<|endoftext|>", "").replace("%%", "$$").replace("&&", "$$").replace("||", "$$").replace(";", " "))
     for x in df["Questions"]:
         questions_and_answers_with_separator.append(x)
         if "@@" in x:
@@ -572,6 +673,13 @@ def preprocess_predictions_df(df):
         no_explanations_generated.append(x.count("$$") + x.count("%%") + x.count("&&") + x.count("||") + 1)
         generated_text.append(x.replace("$$", ".").replace("%%", ".").replace("&&", ".").replace("||", "."))
     for x in reference_text_with_separator:
+        c = x.count("$$") + x.count("%%") + x.count("&&") + x.count("||") + 1
+        x_list = x.split("$$")
+        if c != len(x_list):
+            print("c = ", c)
+            print("x_list = ", x_list)
+            print(x)
+        #print(x)
         no_explanations_reference.append(x.count("$$") + x.count("%%") + x.count("&&") + x.count("||") + 1)
         reference_text.append(x.replace("$$", ".").replace("%%", ".").replace("&&", ".").replace("||", "."))
 
@@ -595,7 +703,7 @@ if __name__ == "__main__":
      no_explanations_reference, no_explanations_generated) = preprocess_predictions_df(df_predictions)
 
     try:
-        bleurt_scores = df_predictions[BLERT_SCORES]
+        bleurt_scores = df_predictions[BLEURT_SCORES]
     except KeyError:
         bleurt_scores, bleurt_mean_score, bleurt_best_df, bleurt_worst_df = evaluate(metric_key="bleurt",
                                                                                      generated=generated_text_with_no_exact_repetitions,
@@ -605,6 +713,15 @@ if __name__ == "__main__":
         # save new csv with scores
         df_predictions["bleurt_scores"] = bleurt_scores
         df_predictions.to_csv(DEV_PREDICTIONS_CSV_PATH.replace(".csv", "_generated_no_exact_repitition.csv"))
+
+    no_facts_in_reference_vs_no_facts_in_generated(reference_text_with_separator, generated_text_with_separator,
+                                                   show_total_no_generated_facts=True,
+                                                   show_no_generated_facts_in_reference=True,
+                                                   show_no_repeatedly_generated_facts=True)
+    no_explanations_in_reference_vs_no_explanations_in_generated(no_explanations_reference, no_explanations_generated)
+
+    show_plots()
+    sys.exit()
 
     # shows how the score decreases as the explanation contains more hops
     no_hops_in_reference_vs_score(no_hops_reference=no_explanations_reference,
@@ -617,7 +734,7 @@ if __name__ == "__main__":
     # expectation is that the more similar the QnA is to the golden explanation, the better the model will do
     similarity_score_for_QnA_and_reference_vs_BLEURT_score_of_generated_explanation(
         questions_and_answers=questions_and_answers,
-        scores=df_predictions[BLERT_SCORES],
+        scores=df_predictions[BLEURT_SCORES],
         references=reference_text,
         similarity_measure=jaccard_similarity,
         similarity_step=10
@@ -629,7 +746,7 @@ if __name__ == "__main__":
         qna_testing_set=questions_and_answers,
         qna_training_set=pd.read_csv(TRAINING_DATA_CSV_PATH, "\t")["question_and_answer"],
         similarity_measure=jaccard_similarity,
-        scores=df_predictions[BLERT_SCORES],
+        scores=df_predictions[BLEURT_SCORES],
         n=3,
         similarity_step=10
     )
@@ -639,7 +756,9 @@ if __name__ == "__main__":
                                                                  no_explanations_generated=no_explanations_generated)
 
     # todo change
-    questions_and_answers_with_separator = pd.read_csv("evaluation/BART-retrieve-prompt/test_predictions_vs_actuals_no_rep_with_bleurt_scores.csv")["Questions"]
+    questions_and_answers_with_separator = \
+    pd.read_csv("evaluation/BART-retrieve-prompt/test_predictions_vs_actuals_no_rep_with_bleurt_scores.csv")[
+        "Questions"]
     no_generated_explanations_vs_no_explanations_copied_from_input(
         questions_and_answers_with_seperator=questions_and_answers_with_separator,
         generated_explanations_with_separator=generated_text_with_separator)
@@ -648,9 +767,9 @@ if __name__ == "__main__":
                                         generated_explanations_with_separator=generated_text_with_separator,
                                         scores=bleurt_scores)
 
-    #todo: fix
-    #does the model's performance degrade when the questions are longer?
-    #no_words_in_question_vs_score(questions=questions_and_answers,
+    # todo: fix
+    # does the model's performance degrade when the questions are longer?
+    # no_words_in_question_vs_score(questions=questions_and_answers,
     #                              scores=bleurt_scores)
 
     show_plots()
