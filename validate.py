@@ -55,7 +55,7 @@ def validate(epoch, tokenizer, model, device, loader, model_params):
             actuals.extend(actual_explanations)
             questions.extend(inputs)
 
-    return inputs, predictions, actuals
+    return questions, predictions, actuals
 
 
 # loader here has to contain a normal / not chained dataset
@@ -185,7 +185,7 @@ def get_chain_source_ids_and_source_mask(tokenizer, max_len, sources_before, gen
 
     for i in range(len(sources_before)):
         source_text_without_retrieval = sources_before[i] + generated_before[i] + separator
-        source_text_with_retrieval = source_text_without_retrieval + (" @ " + retrieved[i] if retrieved else "")
+        source_text_with_retrieval = source_text_without_retrieval + (" @@ " + retrieved[i] if retrieved else "")
 
         # clean data, make sure it's a string
         source_text_without_retrieval = " ".join(source_text_without_retrieval.split())

@@ -97,19 +97,21 @@ if __name__ == "__main__":
                                                                                            only_lexglue=True,
                                                                                            retrieved_facts_sep=LEXGLUE_FACTS_SEP)
             print("finished retrieving lexglue facts")
-            train_length = len(central_train_retrieved_facts)
-            dev_length = len(central_dev_retrieved_facts)
+            train_length = len(df_train_chains.index)
+            dev_length = len(df_dev_chains.index)
 
-            for i in range(train_length):
-                df_train_chains[chosen_model_params[TRAIN_ON]][i] += " @ " + central_train_retrieved_facts[i]
-                df_train_chains[chosen_model_params[TRAIN_ON]][i + 1] += " @ " + grounding_train_retrieved_facts[i]
-                df_train_chains[chosen_model_params[TRAIN_ON]][i + 2] += " @ " + lexglue_train_retrieved_facts[i]
-            for i in range(dev_length):
-                df_dev_chains[chosen_model_params[TRAIN_ON]][i] += " @ " + central_dev_retrieved_facts[i]
-                df_dev_chains[chosen_model_params[TRAIN_ON]][i + 1] += " @ " + grounding_dev_retrieved_facts[i]
-                df_dev_chains[chosen_model_params[TRAIN_ON]][i + 2] += " @ " + lexglue_dev_retrieved_facts[i]
+            for i, j in zip(range(0, train_length, 3), range(0, len(central_train_retrieved_facts))):
+                df_train_chains[chosen_model_params[TRAIN_ON]][i] += " @@ " + central_train_retrieved_facts[j]
+                df_train_chains[chosen_model_params[TRAIN_ON]][i + 1] += " @@ " + grounding_train_retrieved_facts[j]
+                df_train_chains[chosen_model_params[TRAIN_ON]][i + 2] += " @@ " + lexglue_train_retrieved_facts[j]
 
-            # todo here
+            for i, j in zip(range(0, dev_length, 3), range(0, len(central_dev_retrieved_facts))):
+                df_dev_chains[chosen_model_params[TRAIN_ON]][i] += " @@ " + central_dev_retrieved_facts[j]
+                print(df_dev_chains[chosen_model_params[TRAIN_ON]][i])
+                df_dev_chains[chosen_model_params[TRAIN_ON]][i + 1] += " @@ " + grounding_dev_retrieved_facts[j]
+                print(df_dev_chains[chosen_model_params[TRAIN_ON]][i+1])
+                df_dev_chains[chosen_model_params[TRAIN_ON]][i + 2] += " @@ " + lexglue_dev_retrieved_facts[j]
+                print(df_dev_chains[chosen_model_params[TRAIN_ON]][i+2])
         else:
             print("USING RETRIEVAL METHOD - no chain")
             train_retrieved_facts, dev_retrieved_facts = retrieve.retrieve(training_df=df_train,
