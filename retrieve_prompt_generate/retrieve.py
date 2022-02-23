@@ -8,6 +8,7 @@ from retrieve_prompt_generate.bm25 import BM25
 FACTS_BANK_JSON_PATH = "./data/v2-proper-data/tablestore_shared.json"
 TRAINING_DATA_JSON_PATH = "./data/v2-proper-data/train_set_shared.json"
 
+from generate_v2_data import CENTRAL, LEXGLUE, BACKGROUND, GROUNDING
 
 def fit_bm25_on_wtv2(utils, facts_bank, training_questions, facts_ids, training_questions_ids):
     model = BM25()
@@ -32,11 +33,28 @@ def filter_out_non_central(explanations_corpus):
     for question_id, question_dict in explanations_corpus.items():
         question_dict["explanation"] = dict(
             [(fact_id, fact_role) for fact_id, fact_role in question_dict["explanation"].items() if
-             fact_role == "CENTRAL"])
+             fact_role == CENTRAL])
     return explanations_corpus
 
 
-def retrieve(training_df, testing_df, no_similar_hypotheses, no_retrieved_facts, only_central=False):
+def filter_out_non_grouding(explanations_corpus):
+    for question_id, question_dict in explanations_corpus.items():
+        question_dict["explanation"] = dict(
+            [(fact_id, fact_role) for fact_id, fact_role in question_dict["explanation"].items() if
+             fact_role == GROUNDING or fact_role == BACKGROUND])
+    return explanations_corpus
+
+
+def filter_out_non_lexglue(explanations_corpus):
+    for question_id, question_dict in explanations_corpus.items():
+        question_dict["explanation"] = dict(
+            [(fact_id, fact_role) for fact_id, fact_role in question_dict["explanation"].items() if
+             fact_role == LEXGLUE])
+    return explanations_corpus
+
+
+def retrieve(training_df, testing_df, no_similar_hypotheses, no_retrieved_facts,
+             only_central=False, only_grounding=False, only_lexglue=False, retrieved_facts_sep="££"):
     training_questions = training_df["hypothesis"]
     training_questions_ids = training_df["question_id"]
 
@@ -45,6 +63,10 @@ def retrieve(training_df, testing_df, no_similar_hypotheses, no_retrieved_facts,
 
     if only_central:
         explanations_corpus = filter_out_non_central(explanations_corpus)
+    elif only_grounding:
+        explanations_corpus = filter_out_non_grouding(explanations_corpus)
+    elif only_lexglue:
+        explanations_corpus = filter_out_non_lexglue(explanations_corpus)
 
     with open(FACTS_BANK_JSON_PATH) as json_file:
         facts_bank_dict = json.load(json_file)
@@ -82,7 +104,7 @@ def retrieve(training_df, testing_df, no_similar_hypotheses, no_retrieved_facts,
             for high_exp_power_fact_id in explanatory_power:
                 high_exp_power_fact = facts_bank_dict[high_exp_power_fact_id]["fact"]
                 retrieved_facts_for_question.append(high_exp_power_fact)
-            retrieved_facts.append(" ££ ".join(retrieved_facts_for_question))
+            retrieved_facts.append(" {0} ".format(retrieved_facts_sep).join(retrieved_facts_for_question))
         return retrieved_facts
 
     # load test data and retrieve facts for each question

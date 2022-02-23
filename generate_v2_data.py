@@ -1,5 +1,6 @@
 import json
 import random
+import sys
 
 import pandas as pd
 
@@ -155,6 +156,30 @@ def construct_data_table(data_json, hypotheses_json):
     return data_table, questions_missing_hypothesis
 
 
+def print_data_table(data_json):
+    data = json_to_dict(data_json)
+    i = 0
+    for question_id in data.keys():
+        question_data = data[question_id]
+        question = question_data["question"]
+        answer = question_data["answer"]
+        question_topics = ",".join(topics for topics in question_data["topic"])
+        question_and_answer = question + " " + answer
+
+        fact_ids_list = []
+        fact_explanatory_roles = []
+        for id, role in question_data["explanation"].items():
+            fact_ids_list.append(id)
+            fact_explanatory_roles.append(role)
+
+        explanations_list, explanation_types = get_explanations_and_explanations_types_list(fact_ids_list)
+        print("Question ", i)
+        print(question_and_answer)
+        for explanatory_role, fact in zip(fact_explanatory_roles, explanations_list):
+            print("\t({0}) - {1}".format(explanatory_role, fact))
+        i += 1
+
+
 def construct_data_table_with_explanatory_role_chains(data_json, hypotheses_json):
     question_id_and_answer_key_to_hypothesis = json_to_dict(hypotheses_json)
     questions_missing_hypothesis = []
@@ -266,6 +291,9 @@ if __name__ == "__main__":
     # use last 200 samples from dev for test
     ####################################################################
 
+    print_data_table("./data/v2-proper-data/dev_set_shared.json")
+    sys.exit()
+
     # dev data
     dev_table, questions_misssing_hypo = construct_data_table("./data/v2-proper-data/dev_set_shared.json",
                                                               "./data/v2-proper-data/hypothesis_dev_v2.json")
@@ -273,7 +301,7 @@ if __name__ == "__main__":
                                                                             "./data/v2-proper-data/hypothesis_dev_v2.json")
 
     reduced_dev_table = dev_table[:-200]
-    reduced_dev_table_chains = dev_table_chains[:-200]
+    reduced_dev_table_chains = dev_table_chains[:-600]
 
     df = pd.DataFrame(data=reduced_dev_table, columns=columns)
     df.to_csv("./data/v2-proper-data/dev_data_wed.csv", sep="\t")
@@ -293,7 +321,7 @@ if __name__ == "__main__":
 
     # testing data
     test_table = dev_table[-200:]
-    test_table_chains = dev_table_chains[-200:]
+    test_table_chains = dev_table_chains[-600:]
 
     df = pd.DataFrame(data=test_table, columns=columns)
     df.to_csv("./data/v2-proper-data/test_data_wed.csv", sep="\t")

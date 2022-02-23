@@ -4,6 +4,9 @@ import pandas as pd
 pd.options.mode.chained_assignment = None
 from transformers import T5Tokenizer
 
+CENTRAL_RETRIEVED = "CENTRAL_RETRIEVED"
+GROUNDING_RETRIEVED = "GROUNDING_RETRIEVED"
+LEXGLUE_RETRIEVED = "LEXGLUE_RETRIEVED"
 
 class WorldTreeDataset(Dataset):
     """
@@ -11,7 +14,7 @@ class WorldTreeDataset(Dataset):
     """
 
     def __init__(self, dataframe, tokenizer, source_len, target_len, source_text_column_name, target_text_column_name,
-                 source_augmented_text_column_name=None):
+                 central_retrieved=[], grounding_retrieved=[], lexglue_retrieved=[]):
         """
         :param dataframe: pandas.DataFrame, the input data frame
         :param tokenizer: transformers.tokenizer
@@ -30,6 +33,9 @@ class WorldTreeDataset(Dataset):
         self.target_text = self.data[target_text_column_name]
         longest_target_sequence = len(max(self.target_text, key=lambda x: len(x.split())).split())
         print("longest_target_sequence = ", longest_target_sequence)
+        self.central_retrieved = central_retrieved
+        self.grounding_retrieved = grounding_retrieved
+        self.lexglue_retrieved = lexglue_retrieved
 
     # todo: ??
     def __len__(self):
@@ -70,38 +76,55 @@ class WorldTreeDataset(Dataset):
         target_ids = target["input_ids"].squeeze()
         target_mask = target["attention_mask"].squeeze()
 
+        central_retrieved_for_index = self.central_retrieved[index] if self.central_retrieved else ""
+        grounding_retrieved_for_index = self.grounding_retrieved[index] if self.grounding_retrieved else ""
+        lexglue_retrieved_for_index = self.lexglue_retrieved[index] if self.lexglue_retrieved else ""
+
         return {
             "source_ids": source_ids.to(dtype=torch.long),
             "source_mask": source_mask.to(dtype=torch.long),
             "target_ids": target_ids.to(dtype=torch.long),
             # todo what about target_mask ??
             "target_ids_y": target_ids.to(dtype=torch.long),
+            CENTRAL_RETRIEVED: central_retrieved_for_index,
+            GROUNDING_RETRIEVED: grounding_retrieved_for_index,
+            LEXGLUE_RETRIEVED: lexglue_retrieved_for_index
         }
 
 
-if __name__ == "__main__":
-    pass
-    # dev_data_path = "data/v2-proper-data/train_data_wed_with_retrieved_exps.csv"
-    # df_dev = pd.read_csv(dev_data_path, delimiter="\t")
-    # #print(df_dev.keys())
-    #
-    # print(df_dev.columns.tolist())
-    # print(df_dev["question_and_answer"])
-    # #display_df(df_dev[["Questions", "Explanations"]].head(1))
-    # #print(df_dev.head(1)["Explanations"])
-    #
-    # tokenizer = T5Tokenizer.from_pretrained("t5-base")
-    # # todo: continue here/.
-    # testing_set = WorldTreeDataset(
-    #     dataframe=df_dev,
-    #     tokenizer=tokenizer,
-    #     source_text_column_name="hypothesis",
-    #     target_text_column_name="explanation",
-    #     source_len=256,
-    #     target_len=256,
-    #     source_augmented_text_column_name="retrieved_facts"
-    # )
-    #
-    # print(testing_set[10])
-    # for i in range(10):
-    #    print(testing_set[i])
+# if __name__ == "__main__":
+#     dev_data_path = "data/v2-proper-data/train_data_wed_with_retrieved_exps.csv"
+#     df_dev = pd.read_csv(dev_data_path, delimiter="\t")
+#     #print(df_dev.keys())
+#
+#     #print(df_dev.columns.tolist())
+#     #print(df_dev["question_and_answer"])
+#     #display_df(df_dev[["Questions", "Explanations"]].head(1))
+#     #print(df_dev.head(1)["Explanations"])
+#
+#     tokenizer = T5Tokenizer.from_pretrained("t5-base")
+#     # todo: continue here/.
+#     testing_set = WorldTreeDataset(
+#         dataframe=df_dev,
+#         tokenizer=tokenizer,
+#         source_text_column_name="hypothesis",
+#         target_text_column_name="explanation",
+#         source_len=256,
+#         target_len=256,
+#         source_augmented_text_column_name="retrieved_facts"
+#     )
+#     print(len(testing_set))
+#     print(df_dev.shape)
+#
+#     for i in range(len(testing_set)):
+#         testing_set[i]["ret"] = "string"
+#
+#     validation_loader = DataLoader(
+#         dataset=testing_set,
+#         batch_size=4,
+#         shuffle=False,
+#         num_workers=0
+#     )
+#
+#     for d in validation_loader:
+#         print(d)

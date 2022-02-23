@@ -10,9 +10,6 @@ from model_params import MAX_TARGET_TEXT_LENGTH, SEED, MAX_SOURCE_TEXT_LENGTH, M
 import torch
 import numpy as np
 from transformers import BartTokenizer, BartForConditionalGeneration
-from wt_dataset import WorldTreeDataset
-from torch.utils.data import DataLoader
-from transformers.optimization import AdamW, Adafactor
 from validate import validate, validate_with_chains
 from torch.utils.tensorboard import SummaryWriter
 from transformers import T5Tokenizer, T5ForConditionalGeneration
@@ -26,12 +23,8 @@ def set_seed(model_params):
     torch.backends.cudnn.deterministic = True
 
 
-def trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, dev_set2: pd.DataFrame ,source_text: str, target_text: str, model_params,
+def trainer(model, tokenizer, optimizer, training_loader, validation_loader, validation_loader2, model_params,
             output_dir="./outputs"):
-
-    if model_params[CHAIN] and dev_set2 is None:
-        raise Exception("Need 2 dev sets with chain mode")
-
     # for reproducibility
     set_seed(model_params)
 
@@ -58,80 +51,6 @@ def trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, dev_set2: pd.DataFra
     print("USING DEVICE " + device)
     model = model.to(device)
 
-    # importing data
-    train_dataset = train_set[[source_text, target_text]]
-    print(f"TRAIN Dataset: {train_dataset.shape}\n")
-
-    training_dataset = WorldTreeDataset(
-        dataframe=train_dataset,
-        tokenizer=tokenizer,
-        target_len=model_params[MAX_TARGET_TEXT_LENGTH],
-        source_len=model_params[MAX_SOURCE_TEXT_LENGTH],
-        target_text_column_name=target_text,
-        source_text_column_name=source_text
-    )
-    training_loader = DataLoader(
-        dataset=training_dataset,
-        batch_size=model_params[TRAIN_BATCH_SIZE],
-        shuffle=True,
-        num_workers=0
-    )
-
-    val_dataset = dev_set[[source_text, target_text]]
-    print(f"VALIDATION Dataset: {val_dataset.shape}\n")
-
-    validation_dataset = WorldTreeDataset(
-        dataframe=val_dataset,
-        tokenizer=tokenizer,
-        target_len=model_params[MAX_TARGET_TEXT_LENGTH],
-        source_len=model_params[MAX_SOURCE_TEXT_LENGTH],
-        target_text_column_name=target_text,
-        source_text_column_name=source_text
-    )
-    validation_loader = DataLoader(
-        dataset=validation_dataset,
-        batch_size=model_params[VALID_BATCH_SIZE],
-        shuffle=False,
-        num_workers=0
-    )
-
-    if model_params[CHAIN]:
-        val_dataset2 = dev_set2[[source_text, target_text]]
-        validation_dataset2 = WorldTreeDataset(
-            dataframe=val_dataset2,
-            tokenizer=tokenizer,
-            target_len=model_params[MAX_TARGET_TEXT_LENGTH],
-            source_len=model_params[MAX_SOURCE_TEXT_LENGTH],
-            target_text_column_name=target_text,
-            source_text_column_name=source_text
-        )
-        validation_loader2 = DataLoader(
-            dataset=validation_dataset2,
-            batch_size=model_params[VALID_BATCH_SIZE],
-            shuffle=False,
-            num_workers=0
-        )
-
-    if "bart" in model_params[MODEL]:
-        optimizer = AdamW(
-            model.parameters(),
-            lr=3e-5,
-        )
-    else:
-        # optimizer: this is the optimizer recommended for t5-plain
-        optimizer = Adafactor(
-            model.parameters(),
-            lr=1e-3,
-            eps=(1e-30, 1e-3),
-            clip_threshold=1.0,
-            decay_rate=-0.8,
-            beta1=None,
-            weight_decay=0.0,
-            relative_step=False,
-            scale_parameter=False,
-            warmup_init=False
-        )
-
     training_logger = Table(
         Column("Epoch", justify="center"),
         Column("Steps", justify="center"),
@@ -146,12 +65,12 @@ def trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, dev_set2: pd.DataFra
     for training_epoch in range(model_params[TRAIN_EPOCHS]):
         print("STARTING TRAINING EPOCH: " + str(training_epoch) + "\n")
         loss = train_step(epoch=training_epoch,
-                     tokenizer=tokenizer,
-                     model=model,
-                     device=device,
-                     loader=training_loader,
-                     optimizer=optimizer,
-                     logger=training_logger)
+                          tokenizer=tokenizer,
+                          model=model,
+                          device=device,
+                          loader=training_loader,
+                          optimizer=optimizer,
+                          logger=training_logger)
         tb.add_scalar("Loss", loss, training_epoch)
 
         # evaluate at the end of each epoch
@@ -159,15 +78,20 @@ def trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, dev_set2: pd.DataFra
         for validation_epoch in range(model_params[VAL_EPOCHS]):
             if model_params[CHAIN]:
                 # overall bleurt scores
-                predictions, actuals = validate_with_chains(epoch=validation_epoch,
-                                                            tokenizer=tokenizer,
-                                                            loader=validation_loader2,
-                                                            model=model,
-                                                            device=device,
-                                                            model_params=model_params)
+                (questions, retrieved_central, retrieved_grounding,
+                 retrieved_lexglue, predictions, actuals) = validate_with_chains(epoch=validation_epoch,
+                                                                       tokenizer=tokenizer,
+                                                                       loader=validation_loader2,
+                                                                       model=model,
+                                                                       device=device,
+                                                                       model_params=model_params)
+                # augment retrieved to questions
+                if retrieved_lexglue and retrieved_central and retrieved_grounding:
+                    for i in range(len(questions)):
+                        questions[i] += " @ " + " || ".join([retrieved_central[i], retrieved_grounding[i], retrieved_lexglue[i]])
 
                 final_df = pd.DataFrame({
-                    "Questions": val_dataset2[source_text],
+                    "Questions": questions,
                     "Generated Text": predictions,
                     "Actual Text": actuals
                 })
@@ -181,31 +105,31 @@ def trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, dev_set2: pd.DataFra
 
                 #######################################################
                 # bleurt scores for each explanatory role
-                predictions_chains, actuals_chains = validate(epoch=validation_epoch,
-                                                tokenizer=tokenizer,
-                                                loader=validation_loader,
-                                                model=model,
-                                                device=device,
-                                                model_params=model_params)
+                questions_chains, predictions_chains, actuals_chains = validate(epoch=validation_epoch,
+                                                                                tokenizer=tokenizer,
+                                                                                loader=validation_loader,
+                                                                                model=model,
+                                                                                device=device,
+                                                                                model_params=model_params)
                 df = pd.DataFrame({
-                    "Questions": val_dataset[source_text],
+                    "Questions": questions_chains,
                     "Generated Text": predictions_chains,
                     "Actual Text": actuals_chains
                 })
                 _, _, reference_text, _, _, _, generated_text_with_no_exact_repetitions, _, _, _ = preprocess_predictions_df(
                     df=df)
 
-                chain_questions_and_answers = val_dataset[source_text]
                 # for central
                 central_ref = [reference_text[i] for i in range(len(reference_text)) if i % 3 == 0]
-                central_gen = [generated_text_with_no_exact_repetitions[i] for i in range(len(generated_text_with_no_exact_repetitions)) if i % 3 == 0]
-                central_questions = [chain_questions_and_answers[i] for i in range(len(chain_questions_and_answers)) if i % 3 == 0]
+                central_gen = [generated_text_with_no_exact_repetitions[i] for i in
+                               range(len(generated_text_with_no_exact_repetitions)) if i % 3 == 0]
+                central_questions = [questions_chains[i] for i in range(len(questions_chains)) if i % 3 == 0]
 
                 _, central_eval_score, _, _ = evaluate(metric_key="bleurt",
-                                                        generated=central_gen,
-                                                        references=central_ref,
-                                                        questions=None,
-                                                        best_and_worst=False)
+                                                       generated=central_gen,
+                                                       references=central_ref,
+                                                       questions=None,
+                                                       best_and_worst=False)
                 print("central_bleurt_score = ", central_eval_score)
                 tb.add_scalar("central_bleurt_score", central_eval_score, training_epoch)
                 central_df = pd.DataFrame({
@@ -215,16 +139,16 @@ def trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, dev_set2: pd.DataFra
                 })
                 central_df.to_csv("central_predictions.csv")
 
-
                 # for grounding
                 grounding_ref = [reference_text[i] for i in range(len(reference_text)) if i % 3 == 1]
-                grounding_gen = [generated_text_with_no_exact_repetitions[i] for i in range(len(generated_text_with_no_exact_repetitions)) if i % 3 == 1]
-                grounding_questions = [chain_questions_and_answers[i] for i in range(len(chain_questions_and_answers)) if i % 3 == 1]
+                grounding_gen = [generated_text_with_no_exact_repetitions[i] for i in
+                                 range(len(generated_text_with_no_exact_repetitions)) if i % 3 == 1]
+                grounding_questions = [questions_chains[i] for i in range(len(questions_chains)) if i % 3 == 1]
                 _, grounding_eval_score, _, _ = evaluate(metric_key="bleurt",
-                                                        generated=grounding_gen,
-                                                        references=grounding_ref,
-                                                        questions=None,
-                                                        best_and_worst=False)
+                                                         generated=grounding_gen,
+                                                         references=grounding_ref,
+                                                         questions=None,
+                                                         best_and_worst=False)
                 print("grounding_bleurt_score = ", grounding_eval_score)
                 tb.add_scalar("grounding_bleurt_score", grounding_eval_score, training_epoch)
                 grounding_df = pd.DataFrame({
@@ -236,13 +160,14 @@ def trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, dev_set2: pd.DataFra
 
                 # for lexglue
                 lexglue_ref = [reference_text[i] for i in range(len(reference_text)) if i % 3 == 2]
-                lexglue_gen = [generated_text_with_no_exact_repetitions[i] for i in range(len(generated_text_with_no_exact_repetitions)) if i % 3 == 2]
-                lexglue_questions = [chain_questions_and_answers[i] for i in range(len(chain_questions_and_answers)) if i % 3 == 2]
+                lexglue_gen = [generated_text_with_no_exact_repetitions[i] for i in
+                               range(len(generated_text_with_no_exact_repetitions)) if i % 3 == 2]
+                lexglue_questions = [questions_chains[i] for i in range(len(questions_chains)) if i % 3 == 2]
                 _, lexglue_eval_score, _, _ = evaluate(metric_key="bleurt",
-                                                        generated=lexglue_gen,
-                                                        references=lexglue_ref,
-                                                        questions=None,
-                                                        best_and_worst=False)
+                                                       generated=lexglue_gen,
+                                                       references=lexglue_ref,
+                                                       questions=None,
+                                                       best_and_worst=False)
                 print("lexglue_bleurt_score = ", lexglue_eval_score)
                 tb.add_scalar("lexglue_bleurt_score", lexglue_eval_score, training_epoch)
 
@@ -255,15 +180,15 @@ def trainer(train_set: pd.DataFrame, dev_set: pd.DataFrame, dev_set2: pd.DataFra
 
 
             else:
-                predictions, actuals = validate(epoch=validation_epoch,
-                                                tokenizer=tokenizer,
-                                                loader=validation_loader,
-                                                model=model,
-                                                device=device,
-                                                model_params=model_params)
+                questions, predictions, actuals = validate(epoch=validation_epoch,
+                                                           tokenizer=tokenizer,
+                                                           loader=validation_loader,
+                                                           model=model,
+                                                           device=device,
+                                                           model_params=model_params)
 
                 final_df = pd.DataFrame({
-                    "Questions": val_dataset[source_text],
+                    "Questions": questions,
                     "Generated Text": predictions,
                     "Actual Text": actuals
                 })
