@@ -9,16 +9,17 @@ from torch.utils.data import DataLoader
 from transformers.optimization import AdamW, Adafactor
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 
-####################### PATHS #############################
+####################### FIXED PATHS #############################
 path_train = "./data/v2-proper-data/train_data_wed.csv"
 path_dev = "./data/v2-proper-data/dev_data_wed.csv"
-path_train_chains = "./data/v2-proper-data/train_data_wed_chains.csv"
-path_dev_chains = "./data/v2-proper-data/dev_data_wed_chains.csv"
+############################################################
+path_train_chains = None
+path_dev_chains = None
 
 if __name__ == "__main__":
 
     ####################### CHANGE AS APPROPRRIATE #######################
-    chosen_model_params = bart_chain_retrieve_model_params
+    chosen_model_params = bart_chain_grounding_first_model_params
     for k, v in chosen_model_params.items():
         print(k, ":\t", v)
     ######################################################################
@@ -54,8 +55,10 @@ if __name__ == "__main__":
 
     df_train = pd.read_csv(path_train, delimiter="\t")
     df_dev = pd.read_csv(path_dev, delimiter="\t")
-    df_train_chains = pd.read_csv(path_train_chains, delimiter="\t") if chosen_model_params[CHAIN] else None
-    df_dev_chains = pd.read_csv(path_dev_chains, delimiter="\t") if chosen_model_params[CHAIN] else None
+
+    if chosen_model_params[CHAIN]:
+        df_train_chains = pd.read_csv(chosen_model_params[TRAIN_CHAIN_CSV_PATH], delimiter="\t")
+        df_dev_chains = pd.read_csv(chosen_model_params[DEV_CHAINS_CSV_PATH], delimiter="\t")
 
     if chosen_model_params[AUGMENT_INPUT_WITH_RETRIEVED_FACTS]:
         if chosen_model_params[CHAIN]:
@@ -96,14 +99,15 @@ if __name__ == "__main__":
             train_length = len(df_train_chains.index)
             dev_length = len(df_dev_chains.index)
 
+            # todo FA: test
             for i, j in zip(range(0, train_length, 3), range(0, len(central_train_retrieved_facts))):
-                df_train_chains[chosen_model_params[TRAIN_ON]][i] += " @@ " + central_train_retrieved_facts[j]
-                df_train_chains[chosen_model_params[TRAIN_ON]][i + 1] += " @@ " + grounding_train_retrieved_facts[j]
+                df_train_chains[chosen_model_params[TRAIN_ON]][i] += " @@ " + (central_train_retrieved_facts[j] if chosen_model_params[CENTRAL_FIRST] else grounding_train_retrieved_facts[j])
+                df_train_chains[chosen_model_params[TRAIN_ON]][i + 1] += " @@ " + (grounding_train_retrieved_facts[j] if chosen_model_params[CENTRAL_FIRST] else central_train_retrieved_facts[j])
                 df_train_chains[chosen_model_params[TRAIN_ON]][i + 2] += " @@ " + lexglue_train_retrieved_facts[j]
 
             for i, j in zip(range(0, dev_length, 3), range(0, len(central_dev_retrieved_facts))):
-                df_dev_chains[chosen_model_params[TRAIN_ON]][i] += " @@ " + central_dev_retrieved_facts[j]
-                df_dev_chains[chosen_model_params[TRAIN_ON]][i + 1] += " @@ " + grounding_dev_retrieved_facts[j]
+                df_dev_chains[chosen_model_params[TRAIN_ON]][i] += " @@ " + (central_dev_retrieved_facts[j] if chosen_model_params[CENTRAL_FIRST] else grounding_dev_retrieved_facts[j])
+                df_dev_chains[chosen_model_params[TRAIN_ON]][i + 1] += " @@ " + (grounding_dev_retrieved_facts[j] if chosen_model_params[CENTRAL_FIRST] else central_dev_retrieved_facts[j])
                 df_dev_chains[chosen_model_params[TRAIN_ON]][i + 2] += " @@ " + lexglue_dev_retrieved_facts[j]
         else:
             print("USING RETRIEVAL METHOD - no chain")
