@@ -1,6 +1,6 @@
 import torch
 
-from model_params import MAX_TARGET_TEXT_LENGTH, MAX_SOURCE_TEXT_LENGTH, AUGMENT_INPUT_WITH_RETRIEVED_FACTS
+from model_params import *
 from generate_v2_data import GROUNDING, LEXGLUE, CENTRAL, explanatory_role_to_sep
 
 # todo put in a common file
@@ -8,7 +8,8 @@ CENTRAL_RETRIEVED = "CENTRAL_RETRIEVED"
 GROUNDING_RETRIEVED = "GROUNDING_RETRIEVED"
 LEXGLUE_RETRIEVED = "LEXGLUE_RETRIEVED"
 
-def validate(epoch, tokenizer, model, device, loader, model_params):
+
+def generate(epoch, tokenizer, model, device, loader, chosen_model_params):
     # a switch for some kind of layers that behave differently during training and inference
     # common practise in evaluations is to use model.eval() with torch.no_grad() to turn off grad
     # computation during inference which speeds up computation cuz grads are not used for inference
@@ -30,7 +31,7 @@ def validate(epoch, tokenizer, model, device, loader, model_params):
             generated_ids = model.generate(
                 input_ids=source_ids,
                 attention_mask=source_mask,
-                max_length=model_params[MAX_TARGET_TEXT_LENGTH],
+                max_length=chosen_model_params[MAX_TARGET_TEXT_LENGTH],
                 num_beams=2,  # todo: how come?
                 repetition_penalty=2.5,
                 length_penalty=1.0,
@@ -59,15 +60,15 @@ def validate(epoch, tokenizer, model, device, loader, model_params):
 
 
 # loader here has to contain a normal / not chained dataset
-def validate_with_chains(epoch, tokenizer, model, device, loader, model_params):
+def generate_with_chains(epoch, tokenizer, model, device, loader, model_params):
     model.eval()
 
     predictions = []
     actuals = []
     questions = []
-    retrieved_central_facts = []
-    retrieved_grounding_facts = []
-    retrieved_lexglue_facts = []
+    all_retrieved_central_facts = []
+    all_retrieved_grounding_facts = []
+    all_retrieved_lexglue_facts = []
 
     with torch.no_grad():
         for _, data in enumerate(loader, start=0):
@@ -76,15 +77,21 @@ def validate_with_chains(epoch, tokenizer, model, device, loader, model_params):
             target_ids = data["target_ids"].to(device, dtype=torch.long)
             if model_params[AUGMENT_INPUT_WITH_RETRIEVED_FACTS]:
                 central_retrieved = data[CENTRAL_RETRIEVED]
-                retrieved_central_facts.extend(central_retrieved)
+                all_retrieved_central_facts.extend(central_retrieved)
                 grounding_retrieved = data[GROUNDING_RETRIEVED]
-                retrieved_grounding_facts.extend(grounding_retrieved)
+                all_retrieved_grounding_facts.extend(grounding_retrieved)
                 lexglue_retrieved = data[LEXGLUE_RETRIEVED]
-                retrieved_lexglue_facts.extend(lexglue_retrieved)
+                all_retrieved_lexglue_facts.extend(lexglue_retrieved)
             else:
                 central_retrieved = []
                 grounding_retrieved = []
                 lexglue_retrieved = []
+
+            role_to_retrieved = {
+                CENTRAL: central_retrieved,
+                GROUNDING: grounding_retrieved,
+                LEXGLUE: lexglue_retrieved
+            }
 
             actual_explanations = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True) for
                                    id in target_ids]
@@ -94,78 +101,45 @@ def validate_with_chains(epoch, tokenizer, model, device, loader, model_params):
                      source_ids]
             questions.extend(input)
 
-            # source_ids_central = source_ids + central_separator
-            central_sources, central_sources_without_retrieved, central_source_ids, central_source_mask = get_chain_source_ids_and_source_mask(
-                tokenizer=tokenizer,
-                max_len=model_params[MAX_SOURCE_TEXT_LENGTH],
-                sources_before=input,
-                generated_before=["" for _ in range(len(input))],
-                separator=explanatory_role_to_sep[CENTRAL],
-                retrieved=central_retrieved
-            )
-            central_source_ids = central_source_ids.to(device, dtype=torch.long)
-            central_source_mask = central_source_mask.to(device, dtype=torch.long)
+            roles_order = [CENTRAL, GROUNDING, LEXGLUE] if model_params[CENTRAL_FIRST] else [GROUNDING, CENTRAL, LEXGLUE]
+            role_sources_without_retrieved = input
+            empty_generated = ["" for _ in range(len(input))]
+            role_generated = empty_generated
+            central_generated = []
+            grounding_generated = []
+            lexglue_generated = []
+            role_to_generated = {
+                CENTRAL: central_generated,
+                GROUNDING: grounding_generated,
+                LEXGLUE: lexglue_generated
+            }
 
+            for role in roles_order:
+                role_sources, role_sources_without_retrieved, role_source_ids, role_source_mask = get_chain_source_ids_and_source_mask(
+                    tokenizer=tokenizer,
+                    max_len=model_params[MAX_SOURCE_TEXT_LENGTH],
+                    sources_before=role_sources_without_retrieved,
+                    generated_before=empty_generated if model_params[NO_CHAIN_DEP] else role_generated,
+                    # need sep becuz data set this will run on is the normal one without sep
+                    separator=explanatory_role_to_sep[role],
+                    retrieved=role_to_retrieved[role]
+                )
+                role_source_ids = role_source_ids.to(device, dtype=torch.long)
+                role_source_mask = role_source_mask.to(device, dtype=torch.long)
 
-            central_generated_ids = model.generate(
-                input_ids=central_source_ids,
-                attention_mask=central_source_mask,
-                max_length=model_params[MAX_TARGET_TEXT_LENGTH],
-                num_beams=2,  # todo: how come?
-                repetition_penalty=2.5,
-                length_penalty=1.0,
-                early_stopping=True
-            )
-            central_generated = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True) for id
-                                 in central_generated_ids]
+                role_generated_ids = model.generate(
+                    input_ids=role_source_ids,
+                    attention_mask=role_source_mask,
+                    max_length=model_params[MAX_TARGET_TEXT_LENGTH],
+                    num_beams=2,
+                    repetition_penalty=2.5,
+                    length_penalty=1.0,
+                    early_stopping=True
+                )
+                role_generated = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True)
+                                  for id in role_generated_ids]
 
-            # source_ids_grounding = source_ids_central + generated_ids_central + grounding_separator
-            grounding_sources, grounding_sources_without_retrieved, grounding_source_ids, grounding_source_mask = get_chain_source_ids_and_source_mask(
-                tokenizer=tokenizer,
-                max_len=model_params[MAX_SOURCE_TEXT_LENGTH],
-                sources_before=central_sources_without_retrieved,
-                generated_before=central_generated,
-                separator=explanatory_role_to_sep[GROUNDING],
-                retrieved=grounding_retrieved
-            )
-            grounding_source_ids = grounding_source_ids.to(device, dtype=torch.long)
-            grounding_source_mask = grounding_source_mask.to(device, dtype=torch.long)
-
-            grounding_generated_ids = model.generate(
-                input_ids=grounding_source_ids,
-                attention_mask=grounding_source_mask,
-                max_length=model_params[MAX_TARGET_TEXT_LENGTH],
-                num_beams=2,  # todo: how come?
-                repetition_penalty=2.5,
-                length_penalty=1.0,
-                early_stopping=True
-            )
-            grounding_generated = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True) for
-                                   id in grounding_generated_ids]
-
-            # source_ids_lexglue = source_ids_grounding + generated_ids_grounding + lexglue_separtor
-            lexglue_sources, lexglue_sources_without_retrieved, lexglue_source_ids, lexglue_source_mask = get_chain_source_ids_and_source_mask(
-                tokenizer=tokenizer,
-                max_len=model_params[MAX_SOURCE_TEXT_LENGTH],
-                sources_before=grounding_sources_without_retrieved,
-                generated_before=grounding_generated,
-                separator=explanatory_role_to_sep[LEXGLUE],
-                retrieved=lexglue_retrieved
-            )
-            lexglue_source_ids = lexglue_source_ids.to(device, dtype=torch.long)
-            lexglue_source_mask = lexglue_source_mask.to(device, dtype=torch.long)
-
-            lexglue_generated_generated_ids = model.generate(
-                input_ids=lexglue_source_ids,
-                attention_mask=lexglue_source_mask,
-                max_length=model_params[MAX_TARGET_TEXT_LENGTH],
-                num_beams=2,  # todo: how come?
-                repetition_penalty=2.5,
-                length_penalty=1.0,
-                early_stopping=True
-            )
-            lexglue_generated = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True) for id
-                                 in lexglue_generated_generated_ids]
+                role_to_generated[role].append(role_generated)
 
             predicted_explanations = []
             for i in range(len(input)):
@@ -174,7 +148,7 @@ def validate_with_chains(epoch, tokenizer, model, device, loader, model_params):
                 )
             predictions.extend(predicted_explanations)
 
-    return questions, retrieved_central_facts, retrieved_grounding_facts, retrieved_lexglue_facts, predictions, actuals
+    return questions, all_retrieved_central_facts, all_retrieved_grounding_facts, all_retrieved_lexglue_facts, predictions, actuals
 
 
 def get_chain_source_ids_and_source_mask(tokenizer, max_len, sources_before, generated_before, separator, retrieved=[]):

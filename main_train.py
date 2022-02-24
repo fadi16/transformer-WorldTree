@@ -192,5 +192,5 @@ if __name__ == "__main__":
 
     trainer(model=model, tokenizer=tokenizer, optimizer=optimizer, training_loader=training_loader,
             validation_loader=validation_loader,
-            validation_loader2=validation_loader2, model_params=chosen_model_params,
+            validation_loader2=validation_loader2, chosen_model_params=chosen_model_params,
             output_dir="./outputs")

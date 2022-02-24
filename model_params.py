@@ -24,6 +24,8 @@ TEST_CSV_PATH = "TEST_CSV_PATH"
 
 CENTRAL_FIRST = "CENTRAL_FIRST"
 
+NO_CHAIN_DEP = "NO_CHAIN_DEP"
+
 t5_model_params = {
     "MODEL": "t5-base",
     "TRAIN_BATCH_SIZE": 4,
@@ -75,7 +77,8 @@ bart_chain_model_params = {
     "NO_FACTS_TO_RETRIEVE": 0,
     "ONLY_CETRAL": False,
     "TRAIN_ON": QUESTION_AND_ANSWER,
-    "CHAIN": True
+    "CHAIN": True,
+    "NO_CHAIN_DEP": False
 }
 
 bart_chain_retrieve_model_params = {
@@ -97,7 +100,8 @@ bart_chain_retrieve_model_params = {
     "TRAIN_CHAIN_CSV_PATH": "data/v2-proper-data/train_data_wed_chains.csv",
     "DEV_CHAINS_CSV_PATH": "data/v2-proper-data/dev_data_wed_chains.csv",
     "DEV_CSV_PATH": "data/v2-proper-data/dev_data_wed.csv",
-    "CENTRAL_FIRST": True
+    "CENTRAL_FIRST": True,
+    "NO_CHAIN_DEP": False
 }
 
 bart_chain_grounding_first_model_params = {
@@ -119,5 +123,29 @@ bart_chain_grounding_first_model_params = {
     "TRAIN_CHAIN_CSV_PATH": "data/v2-proper-data/train_data_wed_chains_grounding_first.csv",
     "DEV_CHAINS_CSV_PATH": "data/v2-proper-data/dev_data_wed_chains_grounding_first.csv",
     "DEV_CSV_PATH": "data/v2-proper-data/dev_data_wed.csv",
-    "CENTRAL_FIRST": False
+    "CENTRAL_FIRST": False,
+    "NO_CHAIN_DEP": False
+}
+
+bart_chain_no_dep = {
+    "MODEL": "facebook/bart-base",
+    "TRAIN_BATCH_SIZE": 6,
+    "VALID_BATCH_SIZE": 6,
+    "TRAIN_EPOCHS": 10,
+    "VAL_EPOCHS": 1,
+    "LEARNING_RATE": 3e-5,
+    "MAX_SOURCE_TEXT_LENGTH": 256,
+    "MAX_TARGET_TEXT_LENGTH": 256,
+    "SEED": 42,
+    "AUGMENT_INPUT_WITH_RETRIEVED_FACTS": False,
+    "NO_SIMILAR_HYPOTHESIS": 0,
+    "NO_FACTS_TO_RETRIEVE": 0,
+    "ONLY_CETRAL": False,
+    "TRAIN_ON": QUESTION_AND_ANSWER,
+    "CHAIN": True,
+    "TRAIN_CHAIN_CSV_PATH": "data/v2-proper-data/train_data_wed_chains_no_dep.csv",
+    "DEV_CHAINS_CSV_PATH": "data/v2-proper-data/dev_data_wed_chains_no_dep.csv",
+    "DEV_CSV_PATH": "data/v2-proper-data/dev_data_wed.csv",
+    "CENTRAL_FIRST": True,
+    "NO_CHAIN_DEP": True
 }
