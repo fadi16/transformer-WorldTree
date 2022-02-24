@@ -7,10 +7,7 @@ from transformers import BartTokenizer, BartForConditionalGeneration
 from wt_dataset import WorldTreeDataset
 from torch.utils.data import DataLoader
 from transformers.optimization import AdamW, Adafactor
-from validate import validate, validate_with_chains
-from torch.utils.tensorboard import SummaryWriter
 from transformers import T5Tokenizer, T5ForConditionalGeneration
-
 
 ####################### PATHS #############################
 path_train = "./data/v2-proper-data/train_data_wed.csv"
@@ -22,10 +19,9 @@ if __name__ == "__main__":
 
     ####################### CHANGE AS APPROPRRIATE #######################
     chosen_model_params = bart_chain_retrieve_model_params
-    print(chosen_model_params)
+    for k, v in chosen_model_params.items():
+        print(k, ":\t", v)
     ######################################################################
-
-
 
     if "bart" in chosen_model_params[MODEL]:
         # BART tokenizer
@@ -107,11 +103,8 @@ if __name__ == "__main__":
 
             for i, j in zip(range(0, dev_length, 3), range(0, len(central_dev_retrieved_facts))):
                 df_dev_chains[chosen_model_params[TRAIN_ON]][i] += " @@ " + central_dev_retrieved_facts[j]
-                print(df_dev_chains[chosen_model_params[TRAIN_ON]][i])
                 df_dev_chains[chosen_model_params[TRAIN_ON]][i + 1] += " @@ " + grounding_dev_retrieved_facts[j]
-                print(df_dev_chains[chosen_model_params[TRAIN_ON]][i+1])
                 df_dev_chains[chosen_model_params[TRAIN_ON]][i + 2] += " @@ " + lexglue_dev_retrieved_facts[j]
-                print(df_dev_chains[chosen_model_params[TRAIN_ON]][i+2])
         else:
             print("USING RETRIEVAL METHOD - no chain")
             train_retrieved_facts, dev_retrieved_facts = retrieve.retrieve(training_df=df_train,
@@ -127,8 +120,6 @@ if __name__ == "__main__":
             for i in range(len(dev_retrieved_facts)):
                 df_dev[chosen_model_params[TRAIN_ON]][i] += " @@ " + dev_retrieved_facts[i]
 
-
-
     source_text = chosen_model_params[TRAIN_ON]
     target_text = "explanation"
 
@@ -142,8 +133,8 @@ if __name__ == "__main__":
         tokenizer=tokenizer,
         target_len=chosen_model_params[MAX_TARGET_TEXT_LENGTH],
         source_len=chosen_model_params[MAX_SOURCE_TEXT_LENGTH],
-        target_text_column_name=chosen_model_params[TRAIN_ON],
-        source_text_column_name="explanation"
+        target_text_column_name=target_text,
+        source_text_column_name=source_text
     )
     print(f"TRAINING Dataset: {df_train_chains.shape if df_train_chains is not None else df_train.shape}\n")
     training_loader = DataLoader(
@@ -178,9 +169,12 @@ if __name__ == "__main__":
             source_len=chosen_model_params[MAX_SOURCE_TEXT_LENGTH],
             target_text_column_name=target_text,
             source_text_column_name=source_text,
-            central_retrieved=central_dev_retrieved_facts if chosen_model_params[AUGMENT_INPUT_WITH_RETRIEVED_FACTS] else [],
-            grounding_retrieved=grounding_dev_retrieved_facts if chosen_model_params[AUGMENT_INPUT_WITH_RETRIEVED_FACTS] else [],
-            lexglue_retrieved=lexglue_dev_retrieved_facts if chosen_model_params[AUGMENT_INPUT_WITH_RETRIEVED_FACTS] else []
+            central_retrieved=central_dev_retrieved_facts if chosen_model_params[
+                AUGMENT_INPUT_WITH_RETRIEVED_FACTS] else [],
+            grounding_retrieved=grounding_dev_retrieved_facts if chosen_model_params[
+                AUGMENT_INPUT_WITH_RETRIEVED_FACTS] else [],
+            lexglue_retrieved=lexglue_dev_retrieved_facts if chosen_model_params[
+                AUGMENT_INPUT_WITH_RETRIEVED_FACTS] else []
         )
 
         validation_loader2 = DataLoader(
@@ -192,6 +186,7 @@ if __name__ == "__main__":
     else:
         validation_loader2 = None
 
-    trainer(model=model, tokenizer=tokenizer, optimizer=optimizer, training_loader=training_loader, validation_loader=validation_loader,
+    trainer(model=model, tokenizer=tokenizer, optimizer=optimizer, training_loader=training_loader,
+            validation_loader=validation_loader,
             validation_loader2=validation_loader2, model_params=chosen_model_params,
             output_dir="./outputs")
