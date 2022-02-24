@@ -72,7 +72,7 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
                 # augment retrieved to questions
                 if retrieved_lexglue and retrieved_central and retrieved_grounding:
                     for i in range(len(questions)):
-                        questions[i] += " @ " + " || ".join([retrieved_central[i], retrieved_grounding[i], retrieved_lexglue[i]])
+                        questions[i] += " @@ " + " || ".join([retrieved_central[i], retrieved_grounding[i], retrieved_lexglue[i]])
 
                 final_df = pd.DataFrame({
                     "Questions": questions,
