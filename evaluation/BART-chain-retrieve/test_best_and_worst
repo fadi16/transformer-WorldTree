@@ -1,0 +1,455 @@
+[nltk_data] Downloading package stopwords to /root/nltk_data...
+[nltk_data]   Package stopwords is already up-to-date!
+2022-02-24 02:31:32.980830: W tensorflow/core/common_runtime/gpu/gpu_bfc_allocator.cc:39] Overriding allow_growth setting because the TF_FORCE_GPU_ALLOW_GROWTH environment variable is set. Original config value was 0.
+== For bleurt ==
+Mean Score = -0.12340359231922776
+best explanations:
+main_eval.py:205: FutureWarning: Using short name for 'orient' is deprecated. Only the options: ('dict', list, 'series', 'split', 'records', 'index') will be used in a future version. Use one of the above to silence this warning.
+  best_explanations_dict = best_explanations_df.to_dict("record")
+Question:  If an atom has five protons and four electrons, the atom is positively charged.
+Reference Explanations:
+	 0 .	 if an atom has more protons than electrons then the atom will be an ion with positive charge
+Generated Explanations:
+	 0 .	 if an atom has four protons and four electrons the atom is positively charged
+	 1 .
+Score: 0.3570769131183624
+========================================
+Question:  A student wants to compare the masses and volumes of three marbles. Which two instruments should be used? Balance and graduated cylinder
+Reference Explanations:
+	 0 .	 a balance is used for measuring mass weight of an object  of a substance
+	 1 .	  a graduated cylinder is used to measure volume of a liquid  of an object
+	 2 .	  a balance is a kind of instrument for measuring mass  measuring weight
+	 3 .	  a graduated cylinder is a kind of instrument for measuring volume of liquids or objects
+	 4 .	  comparing requires measuring
+	 5 .	  marble is a kind of object  material
+Generated Explanations:
+	 0 .	 a balance is used for measuring mass weight of an object  of a substance
+	 1 .	 a graduated cylinder is a kind of instrument for measuring volume of a liquid  of an objects
+	 2 .	 a balanced cylinder is used to measure volume of liquids or objects
+	 3 .	 comparing requires measuring
+	 4 .	 a marble is a kind of object
+	 5 .	 a balance is a part of a balance  graduated cylinder
+	 6 .	 a balanced cylinder is used for measuring volume of liquids or objects
+	 7 .	 instrument means tool
+	 8 .	 to measure means to calculate
+Score: 0.3598122298717499
+========================================
+Question:  Which tools are needed to measure the length and mass of a seashell? a ruler and a balance
+Reference Explanations:
+	 0 .	 a ruler is a kind of tool for measuring length
+	 1 .	  a ruler is used for measuring the length of an object
+	 2 .	  a balance is a kind of instrument for measuring mass  measuring weight
+	 3 .	  a balance is used for measuring mass weight of an object  of a substance
+	 4 .	  a seashell is a kind of object
+	 5 .	  to depend on  to rely on  to need means to require
+	 6 .	  to be used for something means to be required by that something
+	 7 .	  instrument means tool
+Generated Explanations:
+	 0 .	 a ruler is used for measuring the length of an object
+	 1 .	 a balance is a kind of instrument for measuring mass  measuring weight
+	 2 .	 a seashell is a kind of object
+	 3 .	 instrument means tool
+	 4 .	 determining often requires measuring  observing
+	 5 .	 to be used for something means to be required by that something
+Score: 0.39131829142570496
+========================================
+Question:  At what temperature does a sample of water most rapidly become a gas? boiling point
+Reference Explanations:
+	 0 .	 boiling point means temperature at which a liquid boils  above which a liquid boils
+	 1 .	  water is a kind of liquid at room temperature
+	 2 .	  boiling evaporation means matter  a substance changes from a liquid into a gas by increasing heat energy
+	 3 .	  becoming is similar to changing
+Generated Explanations:
+	 0 .	 boiling evaporation means matter  a substance changes from a liquid into a gas by increasing heat energy
+	 1 .	 temperature is a measure of heat energy
+	 2 .	 water is a kind of liquid at room temperature
+	 3 .	 boiling point is when matter  a substance changes from one state of matter into another state of Matter
+	 4 .	 to become is similar to changing into
+Score: 0.4222629964351654
+========================================
+Question:  Neutral atoms have an equal number of protons and electrons.
+Reference Explanations:
+	 0 .	 if an atom has neutral charge then the atom will have same numbers of protons and electrons
+	 1 .	  an normal atom has a neutral electric charge
+	 2 .	  same means identical  equal in value  amount  number  quantity
+Generated Explanations:
+	 0 .	 if an atom has neutral charge then the atom will have same numbers of protons and electrons
+	 1 .
+	 2 .	 same means identical  equal in value  amount  number  quantity
+Score: 0.4543805718421936
+========================================
+Question:  Which object most likely has magnetic properties? iron nail
+Reference Explanations:
+	 0 .	 a nail is a kind of object
+	 1 .	  iron nails are made of iron
+	 2 .	  if an object is made of a material then that object has the properties of that material
+	 3 .	  soft iron  iron is always ferromagnetic  magnetic
+	 4 .	  magnetism is a property of materials  objects and includes ordered values of nonmagnetic  magnetic
+Generated Explanations:
+	 0 .	 if an object is made of a material then that object has the properties of that material
+	 1 .	 soft iron  iron is always ferromagnetic  magnetic
+	 2 .	 magnetism is a property of materials  objects and includes ordered values of nonmagnetic  magnetic
+	 3 .	 a nail is a kind of object
+	 4 .	 iron nails are made of iron
+	 5 .	 metal is a part of materials  substances and includes ordered values of nonmagnetic  magnetic
+	 6 .	 a property of something is a feature of that something
+Score: 0.4659304916858673
+========================================
+Question:  Which model can be used to trace genetic inheritance? pedigree chart
+Reference Explanations:
+	 0 .	 a pedigree chart is used for tracing genetic inheritance
+	 1 .	  a pedigree chart is a kind of model
+Generated Explanations:
+	 0 .	 the pedigree chart can be used to trace genetic inheritance
+	 1 .
+Score: 0.49574920535087585
+========================================
+Question:  James recorded a measurement of 3° Celsius. Which tool was James most likely using to measure temperature? thermometer
+Reference Explanations:
+	 0 .	 a thermometer is a kind of instrument for measuring temperature
+	 1 .	  a thermometer is used to measure temperature
+	 2 .	  instrument means tool
+Generated Explanations:
+	 0 .	 a thermometer is a kind of instrument for measuring temperature
+	 1 .	 an instrument is a piece of equipment
+	 2 .
+	 3 .	 instrument means tool
+Score: 0.6358991861343384
+========================================
+Question:  What is the smallest unit of an element that retains the properties of that element? atom
+Reference Explanations:
+	 0 .	 the atom is the smallest unit  particle that has the properties of an element
+	 1 .	  to retain means to have
+Generated Explanations:
+	 0 .	 the atom is the smallest unit  particle that has the properties of an element
+	 1 .
+	 2 .	 to retain means to have
+Score: 1.0129786729812622
+========================================
+Question:  A scientific guess about the cause and effect of an event is called a hypothesis.
+Reference Explanations:
+	 0 .	 hypothesis means scientific guess about the cause and effect of an event
+Generated Explanations:
+	 0 .	 a hypothesis is a kind of scientific guess about the cause and effect of an event
+	 1 .
+Score: 0.8561541438102722
+========================================
+Question:  When a scientist performs an experiment, there are many changes that can occur. Which observation should she list as a chemical change? The substance changed into a new substance.
+Reference Explanations:
+	 0 .	 chemical reactions cause chemical change
+	 1 .	  chemical reactions cause new substances  different substances to form
+Generated Explanations:
+	 0 .	 chemical reactions cause new substances  different substances to form
+	 1 .	 chemical reactions cause chemical change
+	 2 .	 a chemical change is a kind of event
+	 3 .
+Score: 0.505057692527771
+========================================
+Question:  The transfer of a section of DNA from one organism into the DNA of another organism by scientists is called genetic engineering
+Reference Explanations:
+	 0 .	 genetic engineering is when scientists transfer a section of DNA from one organism into the DNA of another organism
+Generated Explanations:
+	 0 .	 genetic engineering is a kind of process
+	 1 .	 genetic engineering is used for the transfer of genetic material from one organism into another organism by scientists
+	 2 .
+Score: 0.5521818399429321
+========================================
+Question:  Which action does a kitten learn from its mother? how to hunt mice
+Reference Explanations:
+	 0 .	 hunting  scavenging is a kind of skill
+	 1 .	  skills are learned characteristics  behaviors
+	 2 .	  hunting is a kind of action
+	 3 .	  actions mean behavior
+Generated Explanations:
+	 0 .	 hunting  scavenging is a kind of skill
+	 1 .	 skills are learned characteristics  behaviors
+	 2 .	 hunting is a kind of action
+	 3 .	 trait is synonymous with characteristic
+Score: 0.6527264714241028
+========================================
+Question:  How many chromosomes are found in a fertilized human egg cell? 46
+Reference Explanations:
+	 0 .	 a somatic cell of a human contains 23 pairs of  46 chromosomes
+	 1 .	  a fertilized egg cell is a kind of somatic cell
+	 2 .	  to be found in means to be contained in
+Generated Explanations:
+	 0 .	 a human egg cell contains 46 chromosomes
+	 1 .	 a fertilized human egg cells contain 46 chromosomes
+	 2 .
+	 3 .	 to be found in means to be contained in
+Score: 0.5151271820068359
+========================================
+Question:  In an atom, the electrons can be found orbiting the nucleus.
+Reference Explanations:
+	 0 .	 electrons surround  orbit the nucleus of an atom
+Generated Explanations:
+	 0 .	 electrons surround  orbit the nucleus of an atom
+	 1 .
+Score: 1.0204681158065796
+========================================
+worst explanations:
+main_eval.py:224: FutureWarning: Using short name for 'orient' is deprecated. Only the options: ('dict', list, 'series', 'split', 'records', 'index') will be used in a future version. Use one of the above to silence this warning.
+  worst_explanations_dict = worst_explanations_df.to_dict("record")
+Question:  In photosynthesis, plants use chlorophyll to produce sugar.
+Reference Explanations:
+	 0 .	 light is a kind of energy
+	 1 .	  sugar is a kind of simple carbohydrate
+	 2 .	  photosynthesis is a source of  makes food  energy for the plant by converting carbon dioxide water and sunlight into carbohydrates
+	 3 .	  make means produce
+	 4 .	  chlorophyll is used for absorbing light energy by plants
+	 5 .	  light means light energy
+	 6 .	  In the photosynthesis process carbon dioxide  water  sunlight has the role of raw material
+	 7 .	  if something is a raw material in a process then that something is required for that process
+	 8 .	  to be used for something means to be required by that something
+	 9 .	  sunlight is a kind of light
+	 10 .	  using a raw material sometimes requires absorbing that raw material
+Generated Explanations:
+	 0 .	 sugar is a kind of food
+	 1 .	 chlorophyll is used to produce sugar by plants
+	 2 .	 photosynthesis means producers  green plants convert from carbon dioxide and water and solar energy into carbohydrates and food and oxygen for themselves
+	 3 .
+Score: -0.7416374087333679
+========================================
+Question:  Which of these is a characteristic of the metal gold? malleable
+Reference Explanations:
+	 0 .	 gold is a kind of metal
+	 1 .	  gold is soft
+	 2 .	  if something is soft then that something is malleable
+	 3 .	  hardness is a property of a material  an object and includes ordered values of malleable  rigid
+	 4 .	  characteristic means property
+	 5 .	  metal is a kind of material
+Generated Explanations:
+	 0 .	 malleable is the opposite of malleable
+	 1 .	 malleability is a property of a material  substance
+	 2 .	 metal is a kind of material
+	 3 .	 characteristic means property
+Score: -0.7936166524887085
+========================================
+Question:  What best describes the electrical property of an atom? neutral
+Reference Explanations:
+	 0 .	 an normal atom has a neutral electric charge
+	 1 .	  electrical charge is a property of atoms
+Generated Explanations:
+	 0 .	 neutral is the opposite of neutral
+	 1 .	 neutral is a kind of state of matter
+	 2 .
+Score: -0.9510164260864258
+========================================
+Question:  One year, the oak trees in a park began producing more acorns than usual. The next year, the population of chipmunks in the park also increased. Which best explains why there were more chipmunks the next year? Food sources increased.
+Reference Explanations:
+	 0 .	 if an organism eats something then that something is a source of frood to that organism
+	 1 .	  a chipmunk is a kind of mammal
+	 2 .	  a mammal is a kind of animal
+	 3 .	  an animal is a kind of organism
+	 4 .	  chipmunk eats acorns
+	 5 .	  increase means more
+	 6 .	  as the number of sources of food increase in an environment the population of the organisms will increase in that environment
+	 7 .	  a park is a kind of environment
+	 8 .	  if something causes an increase in something else then that something produces that something else
+Generated Explanations:
+	 0 .	 an increase is the opposite of a decrease
+	 1 .	 as population of prey decreases the population of predators will decrease
+	 2 .	 an oak is a kind of tree
+	 3 .	 food source means source of energy for animals  plants
+	 4 .	 if something requires something else then that something has a positive impact on that something else
+	 5 .	 an increase is similar to a decrease
+Score: -0.6495078206062317
+========================================
+Question:  Which gas could cause rust to form on a metal can? Oxygen
+Reference Explanations:
+	 0 .	 iron in contact with water and oxygen will rust
+	 1 .	  iron is a kind of metal
+	 2 .	  oxygen is a kind of gas at room temperature
+	 3 .	  rusting means forming rust
+	 4 .	  to cause the formation of means to form
+Generated Explanations:
+	 0 .	 rust forming is a kind of chemical change
+	 1 .	 chemical reactions cause chemical change
+	 2 .	 metal rusts
+	 3 .	 rusting means forming rust
+Score: -0.7025092840194702
+========================================
+Question:  The element krypton is a gas that shows almost no chemical activity. To find another element with similar properties, what should a student look for on the Periodic Table of the Elements? an element in the same group
+Reference Explanations:
+	 0 .	 the elements from group 18  from noble gas family are the most unreactive elements in the periodic table
+	 1 .	  the elements from group 18  from noble gas family are the least reactive elements in the periodic table
+	 2 .	  if something is chemically unreactive then something will not show a lot of chemical activity
+	 3 .	  elements from the same group in the periodic table are chemically reactive in a similar way
+	 4 .	  chemical reactivity is a property of elements and includes ordered values of reactive  unreactive
+	 5 .	  helium  neon  argon  krypton  xenon  radon belongs to noble gases family group 18 on the periodic table
+Generated Explanations:
+	 0 .	 the elements in the same group on the Periodic Table of Elements have similar properties
+	 1 .	 if an object is made of a material then that object has the properties of that material
+	 2 .	 objects are made of materials  substances  matter
+	 3 .	 krypton is a kind of element
+	 4 .	 characteristic means property
+Score: -0.8919321298599243
+========================================
+Question:  There are different types of desert. What do they all have in common? low rainfall
+Reference Explanations:
+	 0 .	 a desert environment receives low rainfall
+Generated Explanations:
+	 0 .	 as the amount of rainfall increases in an area the population of available water in that area will increase
+	 1 .	 low rainfall has a negative impact on an ecosystem  organisms living in an ecosystem
+	 2 .	 as the amount is too much the resources used by those organisms will decrease
+	 3 .	 low is similar to decrease
+	 4 .	 a desert is a kind of environment
+	 5 .	 an increase is the opposite of a decrease
+	 6 .	 a type is synonymous with a kind
+	 7 .	 an environment means an area
+	 8 .	 to lower means to decrease
+	 9 .	 negative impact is the opposite of positive impact
+Score: -0.7047940492630005
+========================================
+Question:  Which describes a material that is not a food? It does not store energy or nutrients.
+Reference Explanations:
+	 0 .	 food contains nutrients for living things
+	 1 .	  nutrients are a source of energy for living things
+	 2 .	  if something is a source of something else then that something usually contains that something else
+	 3 .	  contain is similar to store
+Generated Explanations:
+	 0 .	 In the food chain process a green plant has the role of consumer which eats producers other animals for food
+	 1 .	 food does not store energy or nutrients
+	 2 .
+	 3 .	 to be a kind of something means to be that something
+Score: -0.715928316116333
+========================================
+Question:  In which way are sugars usually transported throughout a pine tree? down from the needles to the roots
+Reference Explanations:
+	 0 .	 pine needle is similar to a leaf
+	 1 .	  a leaf performs photosynthesis  gas exchange
+	 2 .	  photosynthesis means producers  green plants convert from carbon dioxide and water and solar energy into carbohydrates and food and oxygen for themselves
+	 3 .	  sugar is a kind of simple carbohydrate
+	 4 .	  sugars are transported from the leaves to the roots of a plant
+	 5 .	  a tree is a kind of plant
+Generated Explanations:
+	 0 .	 sugar is transported throughout a pine tree
+	 1 .	 the roots are the core  center of an oak tree
+	 2 .	 down is similar to down
+	 3 .	 a pine tree is a kind of tree
+	 4 .
+Score: -0.9427664875984192
+========================================
+Question:  A cold can of juice is removed from the refrigerator and is placed outdoors on a warm day. After several minutes, moisture appears on the outside of the cold can. Which of the following statements best explains why the moisture appears? Water vapor in the air condenses into a liquid on the cold can.
+Reference Explanations:
+	 0 .	 condensing means matter  a substance changes from a gas into a liquid by decreasing heat energy
+	 1 .	  water is in the gas state called water vapor  steam for temperatures between 373  212  100 and 100000000000 K  F  C
+	 2 .	  moisture means liquid  liquid water
+	 3 .	  warm means medium heat energy  temperature
+	 4 .	  cold means low in temperature
+	 5 .	  being on something  placed in something  placed over something means touching that something
+	 6 .	  as heat is transferred from something to something else the temperature of that something will decrease
+	 7 .	  cooling colder means removing reducing decreasing heat temperature
+	 8 .	  water vapor steam cooling causes that water vapor steam to condense
+	 9 .	  a freezer  refrigerator is cool  cold in temperature
+	 10 .	  water vapor is found in the atmosphere
+	 11 .	  atmosphere means air
+	 12 .	  water is a kind of substance
+Generated Explanations:
+	 0 .	 temperature is a measure of heat energy
+	 1 .	 condensing means matter  a substance changes from a gas into a liquid by decreasing heat energy
+	 2 .	 water is in the gas state called water vapor  steam for temperatures between 373  212  100 and 100000000000 K  F  C
+	 3 .	 to appear means to make appearance
+	 4 .	 outside means inside
+Score: -0.7546654939651489
+========================================
+Question:  Where would it be MOST dangerous to work with electric tools? beside a swimming pool
+Reference Explanations:
+	 0 .	 a swimming pool contains water
+	 1 .	  water is an electrical  electric energy conductor
+	 2 .	  sending electricity through a conductor causes electricity  electric current to flow through that conductor
+	 3 .	  nervous system is an electrical  electric conductor
+	 4 .	  if one electrical conductor contacts another electrical conductor then electricity will flow through both conductors
+	 5 .	  the nervous system is a part of the body of an animal
+	 6 .	  if electricity flows through  is transferred through the body of an animal then that animal is electrocuted
+	 7 .	  electrocution causes harm to an organism
+	 8 .	  an animal is a kind of organism
+	 9 .	  harm means danger
+	 10 .	  electric devices require electrical energy to function
+	 11 .	  device means tool
+Generated Explanations:
+	 0 .	 electric tools are dangerous
+	 1 .	 electric tools can be used to work with electric tools
+	 2 .
+Score: -1.0124958753585815
+========================================
+Question:  In mice, a certain species displays incomplete dominance in coat coloring. The offspring of a black (BB) mouse and a white (bb) mouse are gray (Bb) mice. A cross between two gray mice will most likely produce offspring with which percent of coat colors? 25% white, 25% black, 50% gray
+Reference Explanations:
+	 0 .	 black fur is a dominant trait in mouse
+	 1 .	  white fur is a recessive trait in mouse
+	 2 .	  a homozygous recessive organism contains only recessive genes
+	 3 .	  a homozygous dominant organism contains only dominant genes
+	 4 .	  a heterozygous organism contains both dominant and recessive genes
+	 5 .	  if a heterozygous dominant organism is crossed  bred with a heterozygous dominant organism then the offspring will have a 25% probability of being homozygous recessive
+	 6 .	  if a heterozygous dominant organism is crossed  bred with a heterozygous dominant organism then the offspring will have a 25% probability of being homozygous dominant
+	 7 .	  if a heterozygous dominant organism is crossed  bred with a heterozygous dominant organism then the offspring will have a 50% probability of being heterozygous dominant
+	 8 .	  coat means fur coat
+	 9 .	  to display means to exhibit
+	 10 .	  incomplete dominance is when offspring exhibit a combination of a property caused by the genes of its parents
+	 11 .	  gray is a combination of black and white
+	 12 .	  the color of  coloration of fur is an inherited characteristic
+	 13 .	  characteristic means property
+	 14 .	  trait is synonymous with characteristic
+Generated Explanations:
+	 0 .	 incomplete dominance is when offspring exhibit a combination of a property caused by the genes of its parents
+	 1 .	 colors are a property of an object  a material and includes ordered values of malleable  rigid
+	 2 .	 coloration is when an inherited characteristic is copied  is passed from parent to offspring through inheritence  DNA  sexual reproduction
+	 3 .	 if both recessive genes are present the dominant trait will be visible  expressed
+	 4 .	 a mouse is a kind of animal
+	 5 .	 an animal is a member of an animal species
+	 6 .	 coloration is a property of an object  a material and includes ordered values of malleable  rigid
+Score: -0.6476238369941711
+========================================
+Question:  Which statement about the genetic traits of humans is true? Visible traits depend on the dominant and recessive forms of genes from each parent.
+Reference Explanations:
+	 0 .	 genes are able to determine the inherited characteristics of a living thing
+	 1 .	  inheriting is when an inherited characteristic is copied  is passed from parent to offspring by genetics DNA
+	 2 .	  if both a dominant and recessive gene are present the dominant trait will be visible  expressed
+	 3 .	  if both dominant genes are present then the dominant trait will be visible  expressed
+	 4 .	  if both recessive genes are present then the recessive trait will be visible  expressed
+	 5 .	  determine is similar to cause
+	 6 .	  if something causes something else then that something else depends on that something
+	 7 .	  offspring receives half of the genes from each parent
+	 8 .	  a human is a kind of animal
+	 9 .	  an animal is a kind of living thing
+Generated Explanations:
+	 0 .	 identical traits are the opposite of learned characteristics  acquired characteristics
+	 1 .	 inheriting is when an inherited characteristic is copied  is passed from parent to offspring by genetics DNA
+	 2 .	 a human is a kind of animal
+	 3 .	 an animal is made of both dominant and recessive genes
+	 4 .	 trait is synonymous with characteristic
+Score: -0.6473344564437866
+========================================
+Question:  Sue measured how much sugar would dissolve in a cup of cold water, a cup of warm water, and a cup of hot water. What did she most likely observe? The hot water dissolved the most sugar.
+Reference Explanations:
+	 0 .	 greatest means largest  highest  most amount of something
+	 1 .	  temperature  heat energy is a property of objects  weather and includes ordered values of cold  cool  warm  hot
+	 2 .	  hot means high in heat energy  temperature
+	 3 .	  as temperature increases the ability of that liquid to dissolve solids will increase
+	 4 .	  high is similar to increase
+	 5 .	  water is a kind of liquid at room temperature
+	 6 .	  sugar is a kind of solid
+Generated Explanations:
+	 0 .	 sugar dissolves in water when they are combined
+	 1 .	 if a thermal conductor  an object is exposed to a source of heat then that conductor  that object may become hot  warm
+	 2 .	 sugar is a kind of pure substance
+	 3 .	 water is in the liquid state called ice for temperatures between 0  -459  -273 and 273  32  0 K  F  C
+	 4 .	 if one surface  one substance  one object touches something then one is exposed to that something
+Score: -0.6119559407234192
+========================================
+Question:  How a material responds to heating and cooling tells us about the material's thermal properties.
+Reference Explanations:
+	 0 .	 a materials response to heating and cooling can be used to study that materials thermal properties
+Generated Explanations:
+	 0 .	 thermal energy is a property of objects  weather and includes ordered values of cold  cool  warm
+	 1 .	 cooling colder means removing reducing decreasing heat temperature
+	 2 .	 if an object is made of a material then that object has the properties of that material
+	 3 .	 temperature is a property of objects  weather and includes ordered values of cold  cool  warm
+	 4 .	 temperature is a measure of heat energy
+	 5 .	 to respond to means to make an effort
+	 6 .	 to change means to have an effect
+	 7 .	 to depend on  to rely on to need means to require
+	 8 .	 if something requires something else then that something requires that something from that something else
+Score: -0.6090673804283142
+========================================
+==========================================================

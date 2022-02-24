@@ -25,6 +25,8 @@ GROUNDING = "GROUNDING"
 BACKGROUND = "BACKGROUND"
 LEXGLUE = "LEXGLUE"
 
+allowed_explanatory_roles = {CENTRAL, GROUNDING, BACKGROUND, LEXGLUE}
+
 
 def display_df(df):
     table = Table(
@@ -180,7 +182,30 @@ def print_data_table(data_json):
         i += 1
 
 
-def construct_data_table_with_explanatory_role_chains(data_json, hypotheses_json):
+# todo : see what to do
+def contains_wrong_explanatory_role(roles):
+    for role in roles:
+        if role not in allowed_explanatory_roles:
+            return True
+    return False
+
+
+def get_training_exp_role_from_wtv2_exp_role(role):
+    # word tree has an extra role: background -> we treat it as grounding
+    # word tree has some weird roles: "ROLE", "NER"
+    if role == BACKGROUND:
+        return GROUNDING
+    else:
+        return role
+
+
+def construct_data_table_with_explanatory_role_chains(data_json, hypotheses_json, roles_order=[CENTRAL, GROUNDING, LEXGLUE]):
+    """
+    :param data_json:
+    :param hypotheses_json:
+    :param roles_order: dictates which roles with appear first in the data: do e start with central or grounding, etc.
+    :return:
+    """
     question_id_and_answer_key_to_hypothesis = json_to_dict(hypotheses_json)
     questions_missing_hypothesis = []
 
@@ -209,77 +234,31 @@ def construct_data_table_with_explanatory_role_chains(data_json, hypotheses_json
 
         explanations_list, explanation_types = get_explanations_and_explanations_types_list(fact_ids_list)
 
-        question_and_answer_for_central = question_and_answer + explanatory_role_to_sep[CENTRAL]
-        hypothesis_for_central = hypothesis + explanatory_role_to_sep[CENTRAL]
-        central_explanations = [explanations_list[i] for i in range(len(explanations_list)) if
-                                fact_explanatory_roles[i] == CENTRAL]
-        central_explanations_str = explanatory_role_to_sep[CENTRAL].join(central_explanations)
-        if not central_explanations_str:
-            central_explanations_str = " "
+        role_explanations_str = ""
+        for role in roles_order:
+            question_and_answer += role_explanations_str + explanatory_role_to_sep[role]
+            hypothesis += role_explanations_str + explanatory_role_to_sep[role]
+            role_explanations = [explanations_list[i] for i in range(len(explanations_list)) if
+                                get_training_exp_role_from_wtv2_exp_role(fact_explanatory_roles[i]) == role]
+            role_explanations_str = explanatory_role_to_sep[role].join(role_explanations)
+            if not role_explanations_str:
+                role_explanations_str = " "
 
-        central_explanation_types = [explanation_types[i] for i in range(len(explanation_types)) if
-                                     fact_explanatory_roles[i] == CENTRAL]
-        central_explanation_types_str = explanatory_role_to_sep[CENTRAL].join(central_explanation_types)
-        data_table.append(
-            [
-                question_id,
-                question_and_answer_for_central,
-                hypothesis_for_central,
-                central_explanations_str,
-                central_explanation_types_str,
-                question_topics,
-                major_question_topic
-            ]
-        )
+            role_explanation_types = [explanation_types[i] for i in range(len(explanation_types)) if
+                                     get_training_exp_role_from_wtv2_exp_role(fact_explanatory_roles[i]) == role]
+            role_explanation_types_str = explanatory_role_to_sep[role].join(role_explanation_types)
 
-        question_and_answer_for_grounding = question_and_answer_for_central + central_explanations_str + \
-                                            explanatory_role_to_sep[GROUNDING]
-        hypothesis_for_grounding = hypothesis_for_central + central_explanations_str + explanatory_role_to_sep[
-            GROUNDING]
-        grounding_explanations = [explanations_list[i] for i in range(len(explanations_list)) if
-                                  fact_explanatory_roles[i] == GROUNDING or fact_explanatory_roles[i] == BACKGROUND]
-        grounding_explanations_str = explanatory_role_to_sep[GROUNDING].join(grounding_explanations)
-        if not grounding_explanations_str:
-            grounding_explanations_str = " "
-        grounding_explanation_types = [explanation_types[i] for i in range(len(explanation_types)) if
-                                       fact_explanatory_roles[i] == GROUNDING or fact_explanatory_roles[
-                                           i] == BACKGROUND]
-        grounding_explanation_types_str = explanatory_role_to_sep[GROUNDING].join(grounding_explanation_types)
-        data_table.append(
-            [
-                question_id,
-                question_and_answer_for_grounding,
-                hypothesis_for_grounding,
-                grounding_explanations_str,
-                grounding_explanation_types_str,
-                question_topics,
-                major_question_topic
-            ]
-        )
-
-        question_and_answer_for_lexglue = question_and_answer_for_grounding + grounding_explanations_str + \
-                                          explanatory_role_to_sep[LEXGLUE]
-        hypothesis_for_lexglue = hypothesis_for_grounding + grounding_explanations_str + explanatory_role_to_sep[
-            LEXGLUE]
-        lexglue_explanations = [explanations_list[i] for i in range(len(explanations_list)) if
-                                fact_explanatory_roles[i] == LEXGLUE]
-        lexglue_explanations_str = explanatory_role_to_sep[LEXGLUE].join(lexglue_explanations)
-        if not lexglue_explanations_str:
-            lexglue_explanations_str = " "
-        lexglue_explanation_types = [explanation_types[i] for i in range(len(explanation_types)) if
-                                     fact_explanatory_roles[i] == LEXGLUE]
-        lexglue_explanation_types_str = explanatory_role_to_sep[LEXGLUE].join(lexglue_explanation_types)
-        data_table.append(
-            [
-                question_id,
-                question_and_answer_for_lexglue,
-                hypothesis_for_lexglue,
-                lexglue_explanations_str,
-                lexglue_explanation_types_str,
-                question_topics,
-                major_question_topic
-            ]
-        )
+            data_table.append(
+                [
+                    question_id,
+                    question_and_answer,
+                    hypothesis,
+                    role_explanations_str,
+                    role_explanation_types_str,
+                    question_topics,
+                    major_question_topic
+                ]
+            )
 
     return data_table, questions_missing_hypothesis
 
@@ -291,8 +270,8 @@ if __name__ == "__main__":
     # use last 200 samples from dev for test
     ####################################################################
 
-    print_data_table("./data/v2-proper-data/dev_set_shared.json")
-    sys.exit()
+    # print_data_table("./data/v2-proper-data/dev_set_shared.json")
+    # sys.exit()
 
     # dev data
     dev_table, questions_misssing_hypo = construct_data_table("./data/v2-proper-data/dev_set_shared.json",
