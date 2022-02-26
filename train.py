@@ -45,14 +45,14 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
     for training_epoch in range(chosen_model_params[TRAIN_EPOCHS]):
         print("STARTING TRAINING EPOCH: " + str(training_epoch) + "\n")
 
-        # loss = train_step(epoch=training_epoch,
-        #                   tokenizer=tokenizer,
-        #                   model=model,
-        #                   device=device,
-        #                   loader=training_loader,
-        #                   optimizer=optimizer,
-        #                   logger=training_logger)
-        # tb.add_scalar("Loss", loss, training_epoch)
+        loss = train_step(epoch=training_epoch,
+                          tokenizer=tokenizer,
+                          model=model,
+                          device=device,
+                          loader=training_loader,
+                          optimizer=optimizer,
+                          logger=training_logger)
+        tb.add_scalar("Loss", loss, training_epoch)
 
         # evaluate at the end of each epoch
         print("Validating after training epoch #{0}\n".format(str(training_epoch)))
