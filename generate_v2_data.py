@@ -270,7 +270,6 @@ def construct_data_table_with_explanatory_role_chains(data_json, hypotheses_json
 
 
 def construct_data_table_with_one_fact_per_hop_chains(data_json, hypotheses_json, no_inference_steps=4):
-    bm25_model = fit_bm25_on_wtv2()
 
     utils = Utils()
     utils.init_explanation_bank_lemmatizer()
@@ -279,6 +278,13 @@ def construct_data_table_with_one_fact_per_hop_chains(data_json, hypotheses_json
     questions_missing_hypothesis = []
 
     data = json_to_dict(data_json)
+
+    # use question id and hypotheses data from previously created csv
+    previous_table = pd.read_csv("./data/v2-proper-data/train_data_wed.csv", sep="\t")
+    bm25_model = fit_bm25_on_wtv2(training_questions_ids=previous_table["question_id"],
+                                  training_questions=previous_table["hypothesis"])
+
+
     data_table = []  # 4D array, containing question id, question&answer, hypothesis, explanations, topics, major topic
 
     for question_id in data.keys():
@@ -302,7 +308,7 @@ def construct_data_table_with_one_fact_per_hop_chains(data_json, hypotheses_json
 
         explanations_list, _ = get_explanations_and_explanations_types_list(fact_ids_list)
 
-        sorted_fact_ids = sort_facts_based_on_similarity_to_question(bm25_model, fact_ids_list, lemmatized_question=utils.preprocess_question(question))
+        sorted_fact_ids = sort_facts_based_on_similarity_to_question(bm25_model, fact_ids_list, lemmatized_question=utils.preprocess(hypothesis))
 
         for id in sorted_fact_ids:
             fact_explanatory_roles.append(question_data["explanation"][id])

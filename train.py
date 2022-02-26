@@ -45,14 +45,14 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
     for training_epoch in range(chosen_model_params[TRAIN_EPOCHS]):
         print("STARTING TRAINING EPOCH: " + str(training_epoch) + "\n")
 
-        loss = train_step(epoch=training_epoch,
-                          tokenizer=tokenizer,
-                          model=model,
-                          device=device,
-                          loader=training_loader,
-                          optimizer=optimizer,
-                          logger=training_logger)
-        tb.add_scalar("Loss", loss, training_epoch)
+        # loss = train_step(epoch=training_epoch,
+        #                   tokenizer=tokenizer,
+        #                   model=model,
+        #                   device=device,
+        #                   loader=training_loader,
+        #                   optimizer=optimizer,
+        #                   logger=training_logger)
+        # tb.add_scalar("Loss", loss, training_epoch)
 
         # evaluate at the end of each epoch
         print("Validating after training epoch #{0}\n".format(str(training_epoch)))
@@ -145,6 +145,44 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
                                                    references=reference_text,
                                                    questions=None,
                                                    best_and_worst=False)
+
+                    #######################################
+                    # For each inference step
+                    questions_inference_steps, predictions_inference_steps, actuals_inference_steps = generate(epoch=validation_epoch,
+                                                                                    tokenizer=tokenizer,
+                                                                                    loader=validation_loader,
+                                                                                    model=model,
+                                                                                    device=device,
+                                                                                    chosen_model_params=chosen_model_params)
+
+                    df = pd.DataFrame({
+                        "Questions": questions_inference_steps,
+                        "Generated Text": predictions_inference_steps,
+                        "Actual Text": actuals_inference_steps
+                    })
+                    _, _, reference_text, _, _, _, generated_text_with_no_exact_repetitions, _, _, _ = preprocess_predictions_df(
+                        df=df)
+
+                    for inference_step in range(chosen_model_params[NO_INFERENCE_STEPS] + 1):
+                        inference_step_ref = [reference_text[i] for i in range(len(reference_text)) if i % (chosen_model_params[NO_INFERENCE_STEPS] + 1) == inference_step]
+                        inference_step_gen = [generated_text_with_no_exact_repetitions[i] for i in range(len(generated_text_with_no_exact_repetitions)) if i % (chosen_model_params[NO_INFERENCE_STEPS] + 1) == inference_step]
+                        inference_step_questions = [questions_chains[i] for i in range(len(questions_chains)) if i % (chosen_model_params[NO_INFERENCE_STEPS] + 1) == inference_step]
+
+                        _, inference_step_eval_score, _, _ = evaluate(metric_key="bleurt",
+                                                               generated=inference_step_gen,
+                                                               references=inference_step_ref,
+                                                               questions=None,
+                                                               best_and_worst=False)
+
+                        print("inference step {0} bleurt score = {1}".format(inference_step, inference_step_eval_score))
+                        tb.add_scalar("inference_step_{0}_BLEURT".format(inference_step), inference_step_eval_score)
+
+                        inference_step_df = pd.DataFrame({
+                            "Questions": inference_step_questions,
+                            "Generated Text": inference_step_gen,
+                            "Actual Text": inference_step_ref
+                        })
+                        inference_step_df.to_csv("inference_step_{0}_predictions.csv".format(inference_step))
 
 
             else:

@@ -17,20 +17,7 @@ GROUNDING = "GROUNDING"
 BACKGROUND = "BACKGROUND"
 LEXGLUE = "LEXGLUE"
 
-def fit_bm25_on_wtv2():
-
-    training_questions = []
-    training_questions_ids = []
-
-    with open(TRAINING_DATA_JSON_PATH) as json_file:
-        training_data = json.load(json_file)
-
-    for question_id in training_data.keys():
-
-        training_questions_ids.append(question_id)
-        question_data = training_data[question_id]
-        question = question_data["question"]
-        training_questions.append(question)
+def fit_bm25_on_wtv2(training_questions, training_questions_ids):
 
     with open(FACTS_BANK_JSON_PATH) as json_file:
         facts_bank_dict = json.load(json_file)
@@ -49,14 +36,14 @@ def fit_bm25_on_wtv2():
     # preprocessing facts bank
     lemmatized_facts_bank = []
     for fact in facts_bank:
-        lemmatized_fact = utils.preprocess_fact(fact)
+        lemmatized_fact = utils.preprocess(fact)
         if lemmatized_fact:
             lemmatized_facts_bank.append(lemmatized_fact)
 
     # preprocessing the q/a - explanations
     lemmatized_questions = []
     for question in training_questions:
-        lemmatized_questions.append(utils.preprocess_question(question))
+        lemmatized_questions.append(utils.preprocess(question))
 
     model.fit(lemmatized_facts_bank, lemmatized_questions, facts_ids, training_questions_ids)
     return model
@@ -89,7 +76,8 @@ def filter_out_non_lexglue(explanations_corpus):
 def retrieve(training_df, testing_df, no_similar_hypotheses, no_retrieved_facts,
              only_central=False, only_grounding=False, only_lexglue=False, retrieved_facts_sep="££"):
 
-    bm25_model = fit_bm25_on_wtv2()
+    bm25_model = fit_bm25_on_wtv2(training_questions=training_df["hypothesis"],
+                                  training_questions_ids=training_df["question_id"])
 
     with open(TRAINING_DATA_JSON_PATH) as json_file:
         explanations_corpus = json.load(json_file)
@@ -108,7 +96,7 @@ def retrieve(training_df, testing_df, no_similar_hypotheses, no_retrieved_facts,
         questions_ids = df["question_id"]
         retrieved_facts = []
         for question, question_id in zip(questions, questions_ids):
-            lemmatized_question = utils.preprocess_question(question, remove_stopwords=True)
+            lemmatized_question = utils.preprocess(question)
             explanatory_power = EP.compute(
                 q_id=question_id,
                 query=lemmatized_question,
@@ -136,6 +124,8 @@ def sort_facts_based_on_similarity_to_question(bm25_model, fact_ids, lemmatized_
     for fact in facts:
         if fact["id"] in fact_ids:
             question_sorted_facts_ids.append(fact["id"])
+            if len(question_sorted_facts_ids) == len(fact_ids):
+                break
 
     return question_sorted_facts_ids
 

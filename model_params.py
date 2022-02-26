@@ -162,8 +162,8 @@ bart_chain_no_dep = {
 
 bart_chain_inference_steps = {
     "MODEL": "facebook/bart-base",
-    "TRAIN_BATCH_SIZE": 5,
-    "VALID_BATCH_SIZE": 10,
+    "TRAIN_BATCH_SIZE": 10,
+    "VALID_BATCH_SIZE": 20,
     "TRAIN_EPOCHS": 10,
     "VAL_EPOCHS": 1,
     "LEARNING_RATE": 3e-5,

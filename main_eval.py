@@ -609,13 +609,18 @@ def preprocess_predictions_df(df):
 
     # with separator
     for x in df["Generated Text"]:
+        if END_SEP in x:
+            x = x[:x.index(END_SEP)].strip()
         generated_text_with_separator.append(
             x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", "").replace(
-                "<|endoftext|>", "").replace(START_SEP, "").replace(END_SEP, "").replace("%%", "$$").replace("&&", "$$").replace("||", "$$").replace(";", " "))
+                "<|endoftext|>", "").replace("%%", "$$").replace("&&", "$$").replace("||", "$$").replace(";", " "))
     for x in df["Actual Text"]:
+        if END_SEP in x:
+            x = x[:x.index(END_SEP)].strip()
         reference_text_with_separator.append(
             x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", "").replace(
-                "<|endoftext|>", "").replace(START_SEP, "").replace(START_SEP, "").replace("%%", "$$").replace("&&", "$$").replace("||", "$$").replace(";", " "))
+                "<|endoftext|>", "").replace("%%", "$$").replace("&&", "$$").replace("||", "$$").replace(";", " "))
+
     for x in df["Questions"]:
         questions_and_answers_with_separator.append(x)
         if "@@" in x:
@@ -625,10 +630,10 @@ def preprocess_predictions_df(df):
     # without separator
     for x in generated_text_with_separator:
         no_explanations_generated.append(x.count("$$") + x.count("%%") + x.count("&&") + x.count("||") + 1)
-        generated_text.append(x.replace("$$", ".").replace("%%", ".").replace("&&", ".").replace("||", ".").replace(END_SEP, "."))
+        generated_text.append(x.replace("$$", ".").replace("%%", ".").replace("&&", ".").replace("||", "."))
     for x in reference_text_with_separator:
         no_explanations_reference.append(x.count("$$") + x.count("%%") + x.count("&&") + x.count("||") + 1)
-        reference_text.append(x.replace("$$", ".").replace("%%", ".").replace("&&", ".").replace("||", ".").replace(END_SEP, "."))
+        reference_text.append(x.replace("$$", ".").replace("%%", ".").replace("&&", ".").replace("||", "."))
 
     generated_text_with_no_exact_repetitions, no_repeated_to_no_generated_ratio = get_generated_no_exact_repeated_facts(
         generated_text_with_separator)

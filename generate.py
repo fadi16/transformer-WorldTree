@@ -79,11 +79,13 @@ def generate_with_inference_chains(epoch, tokenizer, model, device, loader, mode
             input = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True) for id in
                      source_ids]
             questions.extend(input)
+            batch_size = len(input)
 
-            generated_for_this_question = []
+            inference_step_to_generated = dict(zip([i for i in range(model_params[NO_INFERENCE_STEPS] + 1)], [[] for _ in range(model_params[NO_INFERENCE_STEPS] + 1)]))
+
             # for first inference step
             sources = input
-            generated = ["" for _ in range(len(input))]
+            generated = ["" for _ in range(batch_size)]
             for i in range(model_params[NO_INFERENCE_STEPS] + 1):
                 sources, _, source_ids, source_mask = get_chain_source_ids_and_source_mask(
                     tokenizer=tokenizer,
@@ -110,14 +112,12 @@ def generate_with_inference_chains(epoch, tokenizer, model, device, loader, mode
                 generated = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True)
                              for id in generated_ids]
 
-                generated_for_this_question.append(generated)
-                if "<end>" in generated:
-                    break
+                inference_step_to_generated[i].extend(generated)
 
             predicted_explanations = []
-            for i in range(len(input)):
+            for batch_index in range(batch_size):
                 predicted_explanations.append(
-                    " || ".join(generated_for_this_question)
+                    " || ".join([inference_step_to_generated[inference_step][batch_index] for inference_step in range(model_params[NO_INFERENCE_STEPS] + 1)])
                 )
             predictions.extend(predicted_explanations)
 
