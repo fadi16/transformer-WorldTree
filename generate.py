@@ -94,8 +94,8 @@ def generate_with_inference_chains(epoch, tokenizer, model, device, loader, mode
                     separator=" $$ ",
                     retrieved=[]
                 )
-                role_source_ids = role_source_ids.to(device, dtype=torch.long)
-                role_source_mask = role_source_mask.to(device, dtype=torch.long)
+                source_ids = source_ids.to(device, dtype=torch.long)
+                source_mask = source_mask.to(device, dtype=torch.long)
 
                 generated_ids = model.generate(
                     input_ids=source_ids,
