@@ -59,6 +59,71 @@ def generate(epoch, tokenizer, model, device, loader, chosen_model_params):
     return questions, predictions, actuals
 
 
+def generate_with_inference_chains(epoch, tokenizer, model, device, loader, model_params):
+    model.eval()
+
+    predictions = []
+    actuals = []
+    questions = []
+
+    with torch.no_grad():
+        for _, data in enumerate(loader, start=0):
+            source_ids = data["source_ids"].to(device, dtype=torch.long)
+            source_mask = data["source_mask"].to(device, dtype=torch.long)
+            target_ids = data["target_ids"].to(device, dtype=torch.long)
+
+            actual_explanations = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True) for
+                                   id in target_ids]
+            actuals.extend(actual_explanations)
+
+            input = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True) for id in
+                     source_ids]
+            questions.extend(input)
+
+            generated_for_this_question = []
+            # for first inference step
+            sources = input
+            generated = ["" for _ in range(len(input))]
+            for i in range(model_params[NO_INFERENCE_STEPS] + 1):
+                sources, _, source_ids, source_mask = get_chain_source_ids_and_source_mask(
+                    tokenizer=tokenizer,
+                    max_len=model_params[MAX_SOURCE_TEXT_LENGTH],
+                    sources_before=sources,
+                    generated_before=generated,
+                    # need sep becuz data set this will run on is the normal one without sep
+                    separator=" $$ ",
+                    retrieved=[]
+                )
+                role_source_ids = role_source_ids.to(device, dtype=torch.long)
+                role_source_mask = role_source_mask.to(device, dtype=torch.long)
+
+                generated_ids = model.generate(
+                    input_ids=source_ids,
+                    attention_mask=source_mask,
+                    max_length=model_params[MAX_TARGET_TEXT_LENGTH],
+                    num_beams=2,
+                    repetition_penalty=2.5,
+                    length_penalty=1.0,
+                    early_stopping=True
+                )
+
+                generated = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True)
+                             for id in generated_ids]
+
+                generated_for_this_question.append(generated)
+                if "<end>" in generated:
+                    break
+
+            predicted_explanations = []
+            for i in range(len(input)):
+                predicted_explanations.append(
+                    " || ".join(generated_for_this_question)
+                )
+            predictions.extend(predicted_explanations)
+
+    return questions, predictions, actuals
+
+
 # loader here has to contain a normal / not chained dataset
 def generate_with_chains(epoch, tokenizer, model, device, loader, model_params):
     model.eval()
@@ -101,7 +166,8 @@ def generate_with_chains(epoch, tokenizer, model, device, loader, model_params):
                      source_ids]
             questions.extend(input)
 
-            roles_order = [CENTRAL, GROUNDING, LEXGLUE] if model_params[CENTRAL_FIRST] else [GROUNDING, CENTRAL, LEXGLUE]
+            roles_order = [CENTRAL, GROUNDING, LEXGLUE] if model_params[CENTRAL_FIRST] else [GROUNDING, CENTRAL,
+                                                                                             LEXGLUE]
             role_sources_without_retrieved = input
             empty_generated = ["" for _ in range(len(input))]
             role_generated = empty_generated
@@ -113,7 +179,7 @@ def generate_with_chains(epoch, tokenizer, model, device, loader, model_params):
                 GROUNDING: grounding_generated,
                 LEXGLUE: lexglue_generated
             }
-
+            # todo: i think sources_before should be inputs when in NO_CHAIN_DEP mode
             for role in roles_order:
                 role_sources, role_sources_without_retrieved, role_source_ids, role_source_mask = get_chain_source_ids_and_source_mask(
                     tokenizer=tokenizer,
@@ -139,7 +205,7 @@ def generate_with_chains(epoch, tokenizer, model, device, loader, model_params):
                 role_generated = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True)
                                   for id in role_generated_ids]
 
-                role_to_generated[role].append(role_generated)
+                role_to_generated[role].extend(role_generated)
 
             predicted_explanations = []
             for i in range(len(input)):

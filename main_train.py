@@ -19,7 +19,7 @@ path_dev_chains = None
 if __name__ == "__main__":
 
     ####################### CHANGE AS APPROPRRIATE #######################
-    chosen_model_params = bart_chain_grounding_first_model_params
+    chosen_model_params = bart_chain_inference_steps
     for k, v in chosen_model_params.items():
         print(k, ":\t", v)
     ######################################################################
@@ -99,7 +99,6 @@ if __name__ == "__main__":
             train_length = len(df_train_chains.index)
             dev_length = len(df_dev_chains.index)
 
-            # todo FA: test
             for i, j in zip(range(0, train_length, 3), range(0, len(central_train_retrieved_facts))):
                 df_train_chains[chosen_model_params[TRAIN_ON]][i] += " @@ " + (central_train_retrieved_facts[j] if chosen_model_params[CENTRAL_FIRST] else grounding_train_retrieved_facts[j])
                 df_train_chains[chosen_model_params[TRAIN_ON]][i + 1] += " @@ " + (grounding_train_retrieved_facts[j] if chosen_model_params[CENTRAL_FIRST] else central_train_retrieved_facts[j])

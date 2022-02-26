@@ -4,12 +4,15 @@ import sys
 
 import pandas as pd
 
+from retrieve_prompt_generate.utils import Utils
+
 pd.set_option('display.max_columns', 16)
 
 from rich.table import Column, Table
 from rich import box
 import rich
 import pickle
+from retrieve_prompt_generate.retrieve import fit_bm25_on_wtv2, sort_facts_based_on_similarity_to_question
 
 facts_dict = {}
 
@@ -199,11 +202,14 @@ def get_training_exp_role_from_wtv2_exp_role(role):
         return role
 
 
-def construct_data_table_with_explanatory_role_chains(data_json, hypotheses_json, roles_order=[CENTRAL, GROUNDING, LEXGLUE]):
+def construct_data_table_with_explanatory_role_chains(data_json, hypotheses_json,
+                                                      roles_order=[CENTRAL, GROUNDING, LEXGLUE],
+                                                      no_dep_on_before=False):
     """
     :param data_json:
     :param hypotheses_json:
     :param roles_order: dictates which roles with appear first in the data: do e start with central or grounding, etc.
+    :param no_dep_on_before: do not include the output of the previous step in the input of the current step
     :return:
     """
     question_id_and_answer_key_to_hypothesis = json_to_dict(hypotheses_json)
@@ -236,16 +242,16 @@ def construct_data_table_with_explanatory_role_chains(data_json, hypotheses_json
 
         role_explanations_str = ""
         for role in roles_order:
-            question_and_answer += role_explanations_str + explanatory_role_to_sep[role]
-            hypothesis += role_explanations_str + explanatory_role_to_sep[role]
+            question_and_answer += ("" if no_dep_on_before else role_explanations_str) + explanatory_role_to_sep[role]
+            hypothesis += ("" if no_dep_on_before else role_explanations_str) + explanatory_role_to_sep[role]
             role_explanations = [explanations_list[i] for i in range(len(explanations_list)) if
-                                get_training_exp_role_from_wtv2_exp_role(fact_explanatory_roles[i]) == role]
+                                 get_training_exp_role_from_wtv2_exp_role(fact_explanatory_roles[i]) == role]
             role_explanations_str = explanatory_role_to_sep[role].join(role_explanations)
             if not role_explanations_str:
                 role_explanations_str = " "
 
             role_explanation_types = [explanation_types[i] for i in range(len(explanation_types)) if
-                                     get_training_exp_role_from_wtv2_exp_role(fact_explanatory_roles[i]) == role]
+                                      get_training_exp_role_from_wtv2_exp_role(fact_explanatory_roles[i]) == role]
             role_explanation_types_str = explanatory_role_to_sep[role].join(role_explanation_types)
 
             data_table.append(
@@ -263,46 +269,166 @@ def construct_data_table_with_explanatory_role_chains(data_json, hypotheses_json
     return data_table, questions_missing_hypothesis
 
 
+def construct_data_table_with_one_fact_per_hop_chains(data_json, hypotheses_json, no_inference_steps=4):
+    bm25_model = fit_bm25_on_wtv2()
+
+    utils = Utils()
+    utils.init_explanation_bank_lemmatizer()
+
+    question_id_and_answer_key_to_hypothesis = json_to_dict(hypotheses_json)
+    questions_missing_hypothesis = []
+
+    data = json_to_dict(data_json)
+    data_table = []  # 4D array, containing question id, question&answer, hypothesis, explanations, topics, major topic
+
+    for question_id in data.keys():
+        question_data = data[question_id]
+        question = question_data["question"]
+        answer = question_data["answer"]
+        question_topics = ",".join(topics for topics in question_data["topic"])
+        major_question_topic = get_major_topic_from_topics(question_topics)
+        question_and_answer = question + " " + answer
+        answer_key = question_data["answerKey"]
+        try:
+            hypothesis = question_id_and_answer_key_to_hypothesis[question_id][answer_key]
+        except KeyError:
+            hypothesis = question_and_answer
+            questions_missing_hypothesis.append(question_id)
+
+        fact_ids_list = []
+        fact_explanatory_roles = []
+        for id in question_data["explanation"].keys():
+            fact_ids_list.append(id)
+
+        explanations_list, _ = get_explanations_and_explanations_types_list(fact_ids_list)
+
+        sorted_fact_ids = sort_facts_based_on_similarity_to_question(bm25_model, fact_ids_list, lemmatized_question=utils.preprocess_question(question))
+
+        for id in sorted_fact_ids:
+            fact_explanatory_roles.append(question_data["explanation"][id])
+
+        explanations_list, _ = get_explanations_and_explanations_types_list(sorted_fact_ids)
+
+        explanations_str = ""
+
+        last_fact_index = len(explanations_list) - 1
+
+        for i in range(no_inference_steps):
+            if i <= last_fact_index:
+                fact = explanations_list[i]
+            else:
+                fact = " <end> "
+
+            if "<end>  $$" not in question_and_answer:
+                question_and_answer += explanations_str + " $$ "
+            if "<end>  $$" not in hypothesis:
+                hypothesis += explanations_str + " $$ "
+
+            explanations_str = fact
+
+            if i == last_fact_index:
+                explanations_str += " <end> "
+
+            data_table.append(
+                [
+                    question_id,
+                    question_and_answer,
+                    hypothesis,
+                    explanations_str,
+                    question_topics,
+                    major_question_topic
+                ]
+            )
+
+        # the rest of the facts
+        if "<end>  $$" not in question_and_answer:
+            question_and_answer += explanations_str + " $$ "
+        if "<end>  $$" not in hypothesis:
+            hypothesis += explanations_str + " $$ "
+        if last_fact_index >= no_inference_steps:
+            remaining_facts = explanations_list[no_inference_steps:]
+            if len(remaining_facts) > 1:
+                explanations_str = " $$ ".join(explanations_list[no_inference_steps:]) + " <end> "
+            else:
+                explanations_str = remaining_facts[0] + " <end> "
+        else:
+            explanations_str = " <end> "
+
+        explanations_types_str = " "
+        data_table.append(
+            [
+                question_id,
+                question_and_answer,
+                hypothesis,
+                explanations_str,
+                explanations_types_str,
+                question_topics,
+                major_question_topic
+            ]
+        )
+    return data_table, questions_missing_hypothesis
+
+
 if __name__ == "__main__":
     columns = ["question_id", "question_and_answer", "hypothesis", "explanation", "explanation_type", "question_topics",
                "major_question_topic"]
     ####################################################################
     # use last 200 samples from dev for test
     ####################################################################
-
-    # print_data_table("./data/v2-proper-data/dev_set_shared.json")
-    # sys.exit()
+    order = [GROUNDING, CENTRAL, LEXGLUE]
+    order_str = "_".join(order)
 
     # dev data
     dev_table, questions_misssing_hypo = construct_data_table("./data/v2-proper-data/dev_set_shared.json",
                                                               "./data/v2-proper-data/hypothesis_dev_v2.json")
     dev_table_chains, _ = construct_data_table_with_explanatory_role_chains("./data/v2-proper-data/dev_set_shared.json",
-                                                                            "./data/v2-proper-data/hypothesis_dev_v2.json")
+                                                                            "./data/v2-proper-data/hypothesis_dev_v2.json",
+                                                                            roles_order=order
+                                                                            )
+    no_inference_steps = 4
+    dev_table_inference_chains, _ = construct_data_table_with_one_fact_per_hop_chains("./data/v2-proper-data/dev_set_shared.json",
+                                                                                      "./data/v2-proper-data/hypothesis_dev_v2.json",
+                                                                                      no_inference_steps=no_inference_steps)
 
     reduced_dev_table = dev_table[:-200]
     reduced_dev_table_chains = dev_table_chains[:-600]
+    reduced_dev_table_inference_chains = dev_table_inference_chains[:(-200 * (no_inference_steps + 1))]
 
     df = pd.DataFrame(data=reduced_dev_table, columns=columns)
     df.to_csv("./data/v2-proper-data/dev_data_wed.csv", sep="\t")
     df_chains = pd.DataFrame(data=reduced_dev_table_chains, columns=columns)
-    df_chains.to_csv("./data/v2-proper-data/dev_data_wed_chains.csv", sep="\t")
+    df_chains.to_csv("./data/v2-proper-data/dev_data_wed_chains_grounding_first.csv", sep="\t")
+    df_inference_chains = pd.DataFrame(data=reduced_dev_table_inference_chains, columns=columns)
+    df_inference_chains.to_csv("./data/v2-proper-data/dev_data_wed_inference_chains_{0}.csv".format(no_inference_steps), sep="\t")
 
     # training data
     train_table, questions_misssing_hypo = construct_data_table("./data/v2-proper-data/train_set_shared.json",
                                                                 "./data/v2-proper-data/hypothesis_train_v2.json")
     train_table_chains, _ = construct_data_table_with_explanatory_role_chains(
         "./data/v2-proper-data/train_set_shared.json",
-        "./data/v2-proper-data/hypothesis_train_v2.json")
+        "./data/v2-proper-data/hypothesis_train_v2.json",
+        roles_order=order
+    )
+    train_table_inference_chains, _ = construct_data_table_with_one_fact_per_hop_chains(
+        "./data/v2-proper-data/train_set_shared.json",
+        "./data/v2-proper-data/hypothesis_train_v2.json",
+        no_inference_steps=no_inference_steps)
+
     df = pd.DataFrame(data=train_table, columns=columns)
     df.to_csv("./data/v2-proper-data/train_data_wed.csv", sep="\t")
     df_chains = pd.DataFrame(data=train_table_chains, columns=columns)
-    df_chains.to_csv("./data/v2-proper-data/train_data_wed_chains.csv", sep="\t")
+    df_chains.to_csv("./data/v2-proper-data/train_data_wed_chains_grounding_first.csv", sep="\t")
+    df_inference_chains = pd.DataFrame(data=train_table_inference_chains, columns=columns)
+    df_inference_chains.to_csv("./data/v2-proper-data/train_data_wed_inference_chains_{0}.csv".format(no_inference_steps), sep="\t")
 
     # testing data
     test_table = dev_table[-200:]
     test_table_chains = dev_table_chains[-600:]
+    test_table_inference_chains = dev_table_inference_chains[-200 * (no_inference_steps + 1):]
 
     df = pd.DataFrame(data=test_table, columns=columns)
     df.to_csv("./data/v2-proper-data/test_data_wed.csv", sep="\t")
     df_chains = pd.DataFrame(data=test_table_chains, columns=columns)
-    df_chains.to_csv("./data/v2-proper-data/test_data_wed_chains.csv", sep="\t")
+    df_chains.to_csv("./data/v2-proper-data/test_data_wed_chains_grounding_first.csv", sep="\t")
+    df_inference_chains = pd.DataFrame(data=test_table_inference_chains, columns=columns)
+    df_inference_chains.to_csv("./data/v2-proper-data/test_data_wed_inference_chains_{0}.csv".format(no_inference_steps), sep="\t")

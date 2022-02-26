@@ -139,8 +139,9 @@ class BM25:
         self.question_ids = question_train_ids
         self.joined_corpus = []
         self.question_train = question_train
-        for fact in corpus:
-            self.joined_corpus.append(" ".join(fact))
+        # for fact in corpus:
+        #     self.joined_corpus.append(" ".join(fact))
+        self.joined_corpus = self.corpus
         self.vectorizer = BM25Vectorizer().fit(self.joined_corpus + self.question_train)
         self.vectorizer_questions = BM25Vectorizer().fit(
             self.joined_corpus + self.question_train
@@ -155,6 +156,7 @@ class BM25:
         scores = []
 
         transformed_query = self.vectorizer.transform(query)
+        # transformed_corpus is the fact bank
         TFIDF_dist = cosine_distances(transformed_query, self.transformed_corpus)
         res = []
 

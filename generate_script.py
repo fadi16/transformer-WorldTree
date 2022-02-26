@@ -69,20 +69,6 @@ if __name__ == "__main__":
                                                                                                NO_FACTS_TO_RETRIEVE],
                                                                                            only_lexglue=True,
                                                                                            retrieved_facts_sep=LEXGLUE_FACTS_SEP)
-            testing_dataset = WorldTreeDataset(
-                dataframe=df_test,
-                tokenizer=tokenizer,
-                target_len=chosen_model_params[MAX_TARGET_TEXT_LENGTH],
-                source_len=chosen_model_params[MAX_SOURCE_TEXT_LENGTH],
-                target_text_column_name=target_text,
-                source_text_column_name=chosen_model_params[TRAIN_ON],
-                central_retrieved=central_dev_retrieved_facts if chosen_model_params[
-                    AUGMENT_INPUT_WITH_RETRIEVED_FACTS] else [],
-                grounding_retrieved=grounding_dev_retrieved_facts if chosen_model_params[
-                    AUGMENT_INPUT_WITH_RETRIEVED_FACTS] else [],
-                lexglue_retrieved=lexglue_dev_retrieved_facts if chosen_model_params[
-                    AUGMENT_INPUT_WITH_RETRIEVED_FACTS] else []
-            )
         else:
             print("USING RETRIEVAL METHOD - no chain")
             train_retrieved_facts, dev_retrieved_facts = retrieve.retrieve(training_df=df_train,
@@ -91,19 +77,29 @@ if __name__ == "__main__":
                                                                                NO_SIMILAR_HYPOTHESIS],
                                                                            no_retrieved_facts=chosen_model_params[
                                                                                NO_FACTS_TO_RETRIEVE],
-                                                                           only_central=chosen_model_params[ONLY_CETRAL])
+                                                                           only_central=chosen_model_params[
+                                                                               ONLY_CETRAL])
             for i in range(len(train_retrieved_facts)):
                 df_train[chosen_model_params[TRAIN_ON]][i] += " @@ " + train_retrieved_facts[i]
             for i in range(len(dev_retrieved_facts)):
                 df_test[chosen_model_params[TRAIN_ON]][i] += " @@ " + dev_retrieved_facts[i]
 
-            testing_dataset = WorldTreeDataset(
-                dataframe=df_test[[chosen_model_params[TRAIN_ON], target_text]],
-                tokenizer=tokenizer,
-                target_len=chosen_model_params[MAX_TARGET_TEXT_LENGTH],
-                source_len=chosen_model_params[MAX_SOURCE_TEXT_LENGTH],
-                target_text_column_name=target_text,
-                source_text_column_name=chosen_model_params[TRAIN_ON]
+    testing_dataset = WorldTreeDataset(
+        dataframe=df_test,
+        tokenizer=tokenizer,
+        target_len=chosen_model_params[MAX_TARGET_TEXT_LENGTH],
+        source_len=chosen_model_params[MAX_SOURCE_TEXT_LENGTH],
+        target_text_column_name=target_text,
+        source_text_column_name=chosen_model_params[TRAIN_ON],
+        central_retrieved=central_dev_retrieved_facts if chosen_model_params[
+                                                             AUGMENT_INPUT_WITH_RETRIEVED_FACTS] and
+                                                         chosen_model_params[CHAIN] else [],
+        grounding_retrieved=grounding_dev_retrieved_facts if chosen_model_params[
+                                                                 AUGMENT_INPUT_WITH_RETRIEVED_FACTS] and
+                                                             chosen_model_params[CHAIN] else [],
+        lexglue_retrieved=lexglue_dev_retrieved_facts if chosen_model_params[
+                                                             AUGMENT_INPUT_WITH_RETRIEVED_FACTS] and
+                                                         chosen_model_params[CHAIN] else []
     )
 
     testing_loader = DataLoader(
@@ -126,15 +122,17 @@ if __name__ == "__main__":
     with torch.no_grad():
         if chosen_model_params[CHAIN]:
             (questions, all_retrieved_central_facts, all_retrieved_grounding_facts,
-             all_retrieved_lexglue_facts, predictions, actuals) = generate_with_chains(0, tokenizer, model, device, testing_loader, chosen_model_params)
+             all_retrieved_lexglue_facts, predictions, actuals) = generate_with_chains(0, tokenizer, model, device,
+                                                                                       testing_loader,
+                                                                                       chosen_model_params)
 
             predictions_and_actuals_df = pd.DataFrame({
                 "Questions": df_test[chosen_model_params[TRAIN_ON]],
                 "Generated Text": predictions,
                 "Actual Text": actuals,
-                CENTRAL_RETRIEVED: retrieved_central_facts,
-                GROUNDING_RETRIEVED: retrieved_grounding_facts,
-                LEXGLUE_RETRIEVED: retrieved_lexglue_facts
+                CENTRAL_RETRIEVED: retrieved_central_facts if retrieved_central_facts else ([" "] * len(actuals)),
+                GROUNDING_RETRIEVED: retrieved_grounding_facts if retrieved_grounding_facts else ([" "] * len(actuals)),
+                LEXGLUE_RETRIEVED: retrieved_lexglue_facts if retrieved_lexglue_facts else ([" "] * len(actuals))
             })
         else:
             questions, predictions, actuals = generate(0, tokenizer, model, device, testing_loader, chosen_model_params)

@@ -40,11 +40,13 @@ BACKGROUND_FACTS_SEP = "$$"
 LEXGLUE_FACTS_SEP = "%%"
 QUESTION_AND_RETRIEVED_FACTS_SEP = "@@"
 RETRIEVED_FACTS_SEP = "££"
+START_SEP = "<start>"
+END_SEP = "<end>"
 
 ALL_FACTS_SEPARATORS = {
     MAIN_FACTS_SEP, EXPLANATORY_ROLES_FACTS_SEP, CENTRAL_FACTS_SEP,
     GROUNDING_FACTS_SEP, BACKGROUND_FACTS_SEP, LEXGLUE_FACTS_SEP,
-    QUESTION_AND_RETRIEVED_FACTS_SEP, RETRIEVED_FACTS_SEP
+    QUESTION_AND_RETRIEVED_FACTS_SEP, RETRIEVED_FACTS_SEP, END_SEP
 }
 
 
@@ -114,55 +116,6 @@ def no_hops_in_reference_vs_score(no_hops_reference, scores):
     plt.ylabel("bleurt scores")
     figure.show()
 
-
-# TODO: SMOOTH
-def no_words_in_question_vs_score(questions, scores):
-    mean_score = np.mean(scores)
-    no_words_in_questions = []
-    for question in questions:
-        no_words_in_questions.append(len(question.split()))
-
-    no_words_in_questions_to_scores = {}
-    for i in range(len(no_words_in_questions)):
-        if no_words_in_questions[i] in no_words_in_questions_to_scores:
-            no_words_in_questions_to_scores[no_words_in_questions[i]].append(scores[i])
-        else:
-            no_words_in_questions_to_scores[no_words_in_questions[i]] = [scores[i]]
-
-    no_words_in_questions = sorted(list(no_words_in_questions_to_scores.keys()))
-
-    scores = [np.mean(no_words_in_questions_to_scores[no_words_in_question]) for no_words_in_question in
-              no_words_in_questions]
-
-    figure = get_figure()
-
-    plt.plot(no_words_in_questions, scores, marker="o", linestyle="dashed")
-    plt.plot(no_words_in_questions, [mean_score] * len(no_words_in_questions))
-    plt.title("No. words in question vs score")
-    plt.xlabel("no. words in question")
-    plt.ylabel("bleurt score")
-    figure.show()
-
-
-def no_explanations_in_reference_vs_no_explanations_in_generated(no_explanations_reference, no_explanations_generated):
-    no_exp_ref_to_no_exp_gen = {}
-    for i in range(len(no_explanations_reference)):
-        if no_explanations_reference[i] in no_exp_ref_to_no_exp_gen:
-            no_exp_ref_to_no_exp_gen[no_explanations_reference[i]].append(no_explanations_generated[i])
-        else:
-            no_exp_ref_to_no_exp_gen[no_explanations_reference[i]] = [no_explanations_generated[i]]
-
-    no_exp_refs = sorted(list(no_exp_ref_to_no_exp_gen.keys()))
-    no_exp_gens = [np.mean(no_exp_ref_to_no_exp_gen[no_exp_ref]) for no_exp_ref in no_exp_refs]
-
-    figure = get_figure()
-
-    plt.plot(no_exp_refs, no_exp_gens, marker="o", linestyle="dashed")
-    plt.plot(no_exp_refs, no_exp_refs)
-    plt.title("No. explanations in reference vs No. explanations in generated")
-    plt.xlabel("no. explanations in ref")
-    plt.ylabel("no. explanations in gen")
-    figure.show()
 
 
 def evaluate(metric_key: str, questions, references, generated, best_and_worst=True):
@@ -631,11 +584,12 @@ def get_generated_no_exact_repeated_facts(generated_text_with_separators):
         facts = generated_exp.split("$$")
         for fact in facts:
             fact = fact.strip()
-            if fact not in facts_no_rep:
-                facts_no_rep.append(fact)
-            else:
-                no_repeated_facts += 1
-            no_generated_facts += 1
+            if fact != "" and not fact.isspace():
+                if fact not in facts_no_rep:
+                    facts_no_rep.append(fact)
+                else:
+                    no_repeated_facts += 1
+                no_generated_facts += 1
         generated_no_exact_rep.append(".".join(facts_no_rep))
     return generated_no_exact_rep, no_repeated_facts / no_generated_facts
 
@@ -657,11 +611,11 @@ def preprocess_predictions_df(df):
     for x in df["Generated Text"]:
         generated_text_with_separator.append(
             x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", "").replace(
-                "<|endoftext|>", "").replace("%%", "$$").replace("&&", "$$").replace("||", "$$").replace(";", " "))
+                "<|endoftext|>", "").replace(START_SEP, "").replace(END_SEP, "").replace("%%", "$$").replace("&&", "$$").replace("||", "$$").replace(";", " "))
     for x in df["Actual Text"]:
         reference_text_with_separator.append(
             x.replace(",", " ").replace("[", "").replace("]", "").replace("  ", " ").replace("'", "").replace(
-                "<|endoftext|>", "").replace("%%", "$$").replace("&&", "$$").replace("||", "$$").replace(";", " "))
+                "<|endoftext|>", "").replace(START_SEP, "").replace(START_SEP, "").replace("%%", "$$").replace("&&", "$$").replace("||", "$$").replace(";", " "))
     for x in df["Questions"]:
         questions_and_answers_with_separator.append(x)
         if "@@" in x:
@@ -671,17 +625,10 @@ def preprocess_predictions_df(df):
     # without separator
     for x in generated_text_with_separator:
         no_explanations_generated.append(x.count("$$") + x.count("%%") + x.count("&&") + x.count("||") + 1)
-        generated_text.append(x.replace("$$", ".").replace("%%", ".").replace("&&", ".").replace("||", "."))
+        generated_text.append(x.replace("$$", ".").replace("%%", ".").replace("&&", ".").replace("||", ".").replace(END_SEP, "."))
     for x in reference_text_with_separator:
-        c = x.count("$$") + x.count("%%") + x.count("&&") + x.count("||") + 1
-        x_list = x.split("$$")
-        if c != len(x_list):
-            print("c = ", c)
-            print("x_list = ", x_list)
-            print(x)
-        #print(x)
         no_explanations_reference.append(x.count("$$") + x.count("%%") + x.count("&&") + x.count("||") + 1)
-        reference_text.append(x.replace("$$", ".").replace("%%", ".").replace("&&", ".").replace("||", "."))
+        reference_text.append(x.replace("$$", ".").replace("%%", ".").replace("&&", ".").replace("||", ".").replace(END_SEP, "."))
 
     generated_text_with_no_exact_repetitions, no_repeated_to_no_generated_ratio = get_generated_no_exact_repeated_facts(
         generated_text_with_separator)
@@ -718,7 +665,6 @@ if __name__ == "__main__":
                                                    show_total_no_generated_facts=True,
                                                    show_no_generated_facts_in_reference=True,
                                                    show_no_repeatedly_generated_facts=True)
-    no_explanations_in_reference_vs_no_explanations_in_generated(no_explanations_reference, no_explanations_generated)
 
     show_plots()
     sys.exit()

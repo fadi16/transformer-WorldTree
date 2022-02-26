@@ -6,7 +6,7 @@ from rich.table import Table, Column
 from model_params import *
 import torch
 import numpy as np
-from generate import generate, generate_with_chains
+from generate import generate, generate_with_chains, generate_with_inference_chains
 from torch.utils.tensorboard import SummaryWriter
 from main_eval import evaluate, preprocess_predictions_df
 import rich
@@ -58,72 +58,94 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
         print("Validating after training epoch #{0}\n".format(str(training_epoch)))
         for validation_epoch in range(chosen_model_params[VAL_EPOCHS]):
             if chosen_model_params[CHAIN]:
-                # overall bleurt scores
-                (questions, retrieved_central, retrieved_grounding,
-                 retrieved_lexglue, predictions, actuals) = generate_with_chains(epoch=validation_epoch,
-                                                                                 tokenizer=tokenizer,
-                                                                                 loader=validation_loader2,
-                                                                                 model=model,
-                                                                                 device=device,
-                                                                                 model_params=chosen_model_params)
-                # augment retrieved to questions
-                if retrieved_lexglue and retrieved_central and retrieved_grounding:
-                    for i in range(len(questions)):
-                        questions[i] += " @@ " + " || ".join([retrieved_central[i], retrieved_grounding[i], retrieved_lexglue[i]])
+                if chosen_model_params[CHAIN_ON] == ROLE:
+                    # overall bleurt scores
+                    (questions, retrieved_central, retrieved_grounding,
+                     retrieved_lexglue, predictions, actuals) = generate_with_chains(epoch=validation_epoch,
+                                                                                     tokenizer=tokenizer,
+                                                                                     loader=validation_loader2,
+                                                                                     model=model,
+                                                                                     device=device,
+                                                                                     model_params=chosen_model_params)
+                    # augment retrieved to questions
+                    if retrieved_lexglue and retrieved_central and retrieved_grounding:
+                        for i in range(len(questions)):
+                            questions[i] += " @@ " + " || ".join([retrieved_central[i], retrieved_grounding[i], retrieved_lexglue[i]])
 
-                final_df = pd.DataFrame({
-                    "Questions": questions,
-                    "Generated Text": predictions,
-                    "Actual Text": actuals
-                })
-                _, _, reference_text, _, _, _, generated_text_with_no_exact_repetitions, _, _, _ = preprocess_predictions_df(
-                    df=final_df)
-                _, eval_score, _, _ = evaluate(metric_key="bleurt",
-                                               generated=generated_text_with_no_exact_repetitions,
-                                               references=reference_text,
-                                               questions=None,
-                                               best_and_worst=False)
-
-                #######################################################
-                # bleurt scores for each explanatory role
-
-                questions_chains, predictions_chains, actuals_chains = generate(epoch=validation_epoch,
-                                                                                tokenizer=tokenizer,
-                                                                                loader=validation_loader,
-                                                                                model=model,
-                                                                                device=device,
-                                                                                chosen_model_params=chosen_model_params)
-
-                roles = [CENTRAL, GROUNDING, LEXGLUE] if chosen_model_params[CENTRAL_FIRST] else [GROUNDING, CENTRAL, LEXGLUE]
-
-                df = pd.DataFrame({
-                    "Questions": questions_chains,
-                    "Generated Text": predictions_chains,
-                    "Actual Text": actuals_chains
-                })
-                _, _, reference_text, _, _, _, generated_text_with_no_exact_repetitions, _, _, _ = preprocess_predictions_df(
-                    df=df)
-
-                for role_index, role in enumerate(roles):
-                    role_ref = [reference_text[i] for i in range(len(reference_text)) if i % 3 == role_index]
-                    role_gen = [generated_text_with_no_exact_repetitions[i] for i in range(len(generated_text_with_no_exact_repetitions)) if i % 3 == role_index]
-                    role_questions = [questions_chains[i] for i in range(len(questions_chains)) if i % 3 == role_index]
-
-                    _, role_eval_score, _, _ = evaluate(metric_key="bleurt",
-                                                           generated=role_gen,
-                                                           references=role_ref,
-                                                           questions=None,
-                                                           best_and_worst=False)
-
-                    print("{0} bleurt score = {1}".format(role, role_eval_score))
-                    tb.add_scalar("{0}_BLEURT".format(role), role_eval_score)
-
-                    role_df = pd.DataFrame({
-                        "Questions": role_questions,
-                        "Generated Text": role_gen,
-                        "Actual Text": role_ref
+                    final_df = pd.DataFrame({
+                        "Questions": questions,
+                        "Generated Text": predictions,
+                        "Actual Text": actuals
                     })
-                    role_df.to_csv("{0}_predictions.csv".format(role))
+                    _, _, reference_text, _, _, _, generated_text_with_no_exact_repetitions, _, _, _ = preprocess_predictions_df(
+                        df=final_df)
+                    _, eval_score, _, _ = evaluate(metric_key="bleurt",
+                                                   generated=generated_text_with_no_exact_repetitions,
+                                                   references=reference_text,
+                                                   questions=None,
+                                                   best_and_worst=False)
+
+                    #######################################################
+                    # bleurt scores for each explanatory role
+
+                    questions_chains, predictions_chains, actuals_chains = generate(epoch=validation_epoch,
+                                                                                    tokenizer=tokenizer,
+                                                                                    loader=validation_loader,
+                                                                                    model=model,
+                                                                                    device=device,
+                                                                                    chosen_model_params=chosen_model_params)
+
+                    roles = [CENTRAL, GROUNDING, LEXGLUE] if chosen_model_params[CENTRAL_FIRST] else [GROUNDING, CENTRAL, LEXGLUE]
+
+                    df = pd.DataFrame({
+                        "Questions": questions_chains,
+                        "Generated Text": predictions_chains,
+                        "Actual Text": actuals_chains
+                    })
+                    _, _, reference_text, _, _, _, generated_text_with_no_exact_repetitions, _, _, _ = preprocess_predictions_df(
+                        df=df)
+
+                    for role_index, role in enumerate(roles):
+                        role_ref = [reference_text[i] for i in range(len(reference_text)) if i % 3 == role_index]
+                        role_gen = [generated_text_with_no_exact_repetitions[i] for i in range(len(generated_text_with_no_exact_repetitions)) if i % 3 == role_index]
+                        role_questions = [questions_chains[i] for i in range(len(questions_chains)) if i % 3 == role_index]
+
+                        _, role_eval_score, _, _ = evaluate(metric_key="bleurt",
+                                                               generated=role_gen,
+                                                               references=role_ref,
+                                                               questions=None,
+                                                               best_and_worst=False)
+
+                        print("{0} bleurt score = {1}".format(role, role_eval_score))
+                        tb.add_scalar("{0}_BLEURT".format(role), role_eval_score)
+
+                        role_df = pd.DataFrame({
+                            "Questions": role_questions,
+                            "Generated Text": role_gen,
+                            "Actual Text": role_ref
+                        })
+                        role_df.to_csv("{0}_predictions.csv".format(role))
+
+                elif chosen_model_params[CHAIN_ON] == PREVIOUS_SORTED:
+                    questions, predictions, actuals = generate_with_inference_chains(epoch=validation_epoch,
+                                                                            tokenizer=tokenizer,
+                                                                            loader=validation_loader2,
+                                                                            model=model,
+                                                                            device=device,
+                                                                            model_params=chosen_model_params)
+                    final_df = pd.DataFrame({
+                        "Questions": questions,
+                        "Generated Text": predictions,
+                        "Actual Text": actuals
+                    })
+                    _, _, reference_text, _, _, _, generated_text_with_no_exact_repetitions, _, _, _ = preprocess_predictions_df(
+                        df=final_df)
+                    _, eval_score, _, _ = evaluate(metric_key="bleurt",
+                                                   generated=generated_text_with_no_exact_repetitions,
+                                                   references=reference_text,
+                                                   questions=None,
+                                                   best_and_worst=False)
+
 
             else:
                 questions, predictions, actuals = generate(epoch=validation_epoch,
