@@ -145,6 +145,9 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
                                                    references=reference_text,
                                                    questions=None,
                                                    best_and_worst=False)
+                    print("**" * 10)
+                    print("Finished overall validation")
+                    print("**" * 10)
 
                     #######################################
                     # For each inference step
@@ -166,7 +169,7 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
                     for inference_step in range(chosen_model_params[NO_INFERENCE_STEPS] + 1):
                         inference_step_ref = [reference_text[i] for i in range(len(reference_text)) if i % (chosen_model_params[NO_INFERENCE_STEPS] + 1) == inference_step]
                         inference_step_gen = [generated_text_with_no_exact_repetitions[i] for i in range(len(generated_text_with_no_exact_repetitions)) if i % (chosen_model_params[NO_INFERENCE_STEPS] + 1) == inference_step]
-                        inference_step_questions = [questions_chains[i] for i in range(len(questions_chains)) if i % (chosen_model_params[NO_INFERENCE_STEPS] + 1) == inference_step]
+                        inference_step_questions = [questions_inference_steps[i] for i in range(len(questions_inference_steps)) if i % (chosen_model_params[NO_INFERENCE_STEPS] + 1) == inference_step]
 
                         _, inference_step_eval_score, _, _ = evaluate(metric_key="bleurt",
                                                                generated=inference_step_gen,
@@ -183,6 +186,9 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
                             "Actual Text": inference_step_ref
                         })
                         inference_step_df.to_csv("inference_step_{0}_predictions.csv".format(inference_step))
+                        print("**" * 10)
+                        print("finished inference step {0} validation".format(inference_step))
+                        print("**" * 10)
 
 
             else:
