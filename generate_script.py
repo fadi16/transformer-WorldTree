@@ -122,8 +122,8 @@ if __name__ == "__main__":
     with torch.no_grad():
         if chosen_model_params[CHAIN]:
             if chosen_model_params[CHAIN_ON] == ROLE:
-                (questions, all_retrieved_central_facts, all_retrieved_grounding_facts,
-                 all_retrieved_lexglue_facts, predictions, actuals) = generate_with_chains(0, tokenizer, model, device,
+                (questions, retrieved_central_facts, retrieved_grounding_facts,
+                 retrieved_lexglue_facts, predictions, actuals) = generate_with_chains(0, tokenizer, model, device,
                                                                                            testing_loader,
                                                                                            chosen_model_params)
 
