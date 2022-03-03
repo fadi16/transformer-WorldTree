@@ -5,19 +5,19 @@ from model_params import *
 from wt_dataset import WorldTreeDataset, GROUNDING_RETRIEVED, CENTRAL_RETRIEVED, LEXGLUE_RETRIEVED
 from torch.utils.data import DataLoader
 from retrieve_prompt_generate import retrieve
-from generate import get_chain_source_ids_and_source_mask
+from generate import get_chain_source_ids_and_source_mask, generate_with_inference_chains
 from generate_v2_data import explanatory_role_to_sep, GROUNDING, BACKGROUND, CENTRAL, LEXGLUE
 from main_eval import CENTRAL_FACTS_SEP, GROUNDING_FACTS_SEP, LEXGLUE_FACTS_SEP
 from generate import generate, generate_with_chains
 
 # todo: change checkpoint and file paths if needed
 #############################################
-OUTPUT_FILE_PATH = "evaluation/validation_predictions_vs_actuals.csv"
-MODEL_CHECKPOINT_DIR_PATH = "./outputs/checkpoints"
+OUTPUT_FILE_PATH = "evaluation/BART-chain-retrieve/validation_predictions_vs_actuals.csv"
+MODEL_CHECKPOINT_DIR_PATH = "./evaluation/BART-chain-retrieve/outputs/checkpoints"
 target_text = "explanation"
 TRAINING_CSV_PATH = "./data/v2-proper-data/train_data_wed.csv"
 TESTING_CSV_PATH = "./data/v2-proper-data/dev_data_wed.csv"
-chosen_model_params = bart_chain_model_params
+chosen_model_params = bart_chain_retrieve_different_model_params
 ##############################################
 
 if __name__ == "__main__":
@@ -44,7 +44,7 @@ if __name__ == "__main__":
                                                                                                NO_SIMILAR_HYPOTHESIS],
                                                                                            no_retrieved_facts=
                                                                                            chosen_model_params[
-                                                                                               NO_FACTS_TO_RETRIEVE],
+                                                                                               NO_FACTS_TO_RETRIEVE_CENTRAL],
                                                                                            only_central=True,
                                                                                            retrieved_facts_sep=CENTRAL_FACTS_SEP)
             print("finished retrieving central facts")
@@ -55,7 +55,7 @@ if __name__ == "__main__":
                                                                                                    NO_SIMILAR_HYPOTHESIS],
                                                                                                no_retrieved_facts=
                                                                                                chosen_model_params[
-                                                                                                   NO_FACTS_TO_RETRIEVE],
+                                                                                                   NO_FACTS_TO_RETRIEVE_GROUNDING],
                                                                                                only_grounding=True,
                                                                                                retrieved_facts_sep=GROUNDING_FACTS_SEP)
             print("finished retrieving grounding facts")
@@ -66,7 +66,7 @@ if __name__ == "__main__":
                                                                                                NO_SIMILAR_HYPOTHESIS],
                                                                                            no_retrieved_facts=
                                                                                            chosen_model_params[
-                                                                                               NO_FACTS_TO_RETRIEVE],
+                                                                                               NO_FACTS_TO_RETRIEVE_LEXGLUE],
                                                                                            only_lexglue=True,
                                                                                            retrieved_facts_sep=LEXGLUE_FACTS_SEP)
         else:
@@ -121,19 +121,32 @@ if __name__ == "__main__":
 
     with torch.no_grad():
         if chosen_model_params[CHAIN]:
-            (questions, all_retrieved_central_facts, all_retrieved_grounding_facts,
-             all_retrieved_lexglue_facts, predictions, actuals) = generate_with_chains(0, tokenizer, model, device,
-                                                                                       testing_loader,
-                                                                                       chosen_model_params)
+            if chosen_model_params[CHAIN_ON] == ROLE:
+                (questions, all_retrieved_central_facts, all_retrieved_grounding_facts,
+                 all_retrieved_lexglue_facts, predictions, actuals) = generate_with_chains(0, tokenizer, model, device,
+                                                                                           testing_loader,
+                                                                                           chosen_model_params)
 
-            predictions_and_actuals_df = pd.DataFrame({
-                "Questions": df_test[chosen_model_params[TRAIN_ON]],
-                "Generated Text": predictions,
-                "Actual Text": actuals,
-                CENTRAL_RETRIEVED: retrieved_central_facts if retrieved_central_facts else ([" "] * len(actuals)),
-                GROUNDING_RETRIEVED: retrieved_grounding_facts if retrieved_grounding_facts else ([" "] * len(actuals)),
-                LEXGLUE_RETRIEVED: retrieved_lexglue_facts if retrieved_lexglue_facts else ([" "] * len(actuals))
-            })
+                predictions_and_actuals_df = pd.DataFrame({
+                    "Questions": df_test[chosen_model_params[TRAIN_ON]],
+                    "Generated Text": predictions,
+                    "Actual Text": actuals,
+                    CENTRAL_RETRIEVED: retrieved_central_facts if retrieved_central_facts else ([" "] * len(actuals)),
+                    GROUNDING_RETRIEVED: retrieved_grounding_facts if retrieved_grounding_facts else ([" "] * len(actuals)),
+                    LEXGLUE_RETRIEVED: retrieved_lexglue_facts if retrieved_lexglue_facts else ([" "] * len(actuals))
+                })
+            elif chosen_model_params[CHAIN_ON] == PREVIOUS_SORTED:
+                questions, predictions, actuals = generate_with_inference_chains(epoch=0,
+                                                                                 tokenizer=tokenizer,
+                                                                                 loader=testing_loader,
+                                                                                 model=model,
+                                                                                 device=device,
+                                                                                 model_params=chosen_model_params)
+                predictions_and_actuals_df = pd.DataFrame({
+                    "Questions": questions,
+                    "Generated Text": predictions,
+                    "Actual Text": actuals
+                })
         else:
             questions, predictions, actuals = generate(0, tokenizer, model, device, testing_loader, chosen_model_params)
 

@@ -32,6 +32,11 @@ PREVIOUS_SORTED = "PREVIOUS_SORTED"
 ROLE = "ROLE"
 NO_INFERENCE_STEPS = "NO_INFERENCE_STEPS"
 
+
+NO_FACTS_TO_RETRIEVE_CENTRAL = "NO_FACTS_TO_RETRIEVE_CENTRAL"
+NO_FACTS_TO_RETRIEVE_GROUNDING = "NO_FACTS_TO_RETRIEVE_GROUNDING"
+NO_FACTS_TO_RETRIEVE_LEXGLUE = "NO_FACTS_TO_RETRIEVE_LEXGLUE"
+
 t5_model_params = {
     "MODEL": "t5-base",
     "TRAIN_BATCH_SIZE": 4,
@@ -109,8 +114,42 @@ bart_chain_retrieve_model_params = {
     "DEV_CSV_PATH": "data/v2-proper-data/dev_data_wed.csv",
     "CENTRAL_FIRST": True,
     "NO_CHAIN_DEP": False,
-    CHAIN_ON: ROLE
+    CHAIN_ON: ROLE,
+    NO_FACTS_TO_RETRIEVE_CENTRAL: 3,
+    NO_FACTS_TO_RETRIEVE_GROUNDING: 3,
+    NO_FACTS_TO_RETRIEVE_LEXGLUE: 3
 }
+
+# retrieve differentn number of facts for central etc
+bart_chain_retrieve_different_model_params = {
+    "MODEL": "facebook/bart-base",
+    "TRAIN_BATCH_SIZE": 6,
+    "VALID_BATCH_SIZE": 6,
+    "TRAIN_EPOCHS": 10,
+    "VAL_EPOCHS": 1,
+    "LEARNING_RATE": 3e-5,
+    "MAX_SOURCE_TEXT_LENGTH": 280,
+    "MAX_TARGET_TEXT_LENGTH": 280,
+    "SEED": 42,
+    "AUGMENT_INPUT_WITH_RETRIEVED_FACTS": True,
+    "NO_SIMILAR_HYPOTHESIS": 20,
+    "NO_FACTS_TO_RETRIEVE": 3,
+    "ONLY_CETRAL": False,
+    "TRAIN_ON": QUESTION_AND_ANSWER,
+    "CHAIN": True,
+    "TRAIN_CHAIN_CSV_PATH": "data/v2-proper-data/train_data_wed_chains.csv",
+    "DEV_CHAINS_CSV_PATH": "data/v2-proper-data/dev_data_wed_chains.csv",
+    "DEV_CSV_PATH": "data/v2-proper-data/dev_data_wed.csv",
+    "CENTRAL_FIRST": True,
+    "NO_CHAIN_DEP": False,
+    CHAIN_ON: ROLE,
+    NO_FACTS_TO_RETRIEVE_CENTRAL: 3,
+    NO_FACTS_TO_RETRIEVE_GROUNDING: 2,
+    NO_FACTS_TO_RETRIEVE_LEXGLUE: 1
+}
+
+
+
 
 bart_chain_grounding_first_model_params = {
     "MODEL": "facebook/bart-base",

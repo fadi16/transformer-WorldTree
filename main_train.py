@@ -70,7 +70,7 @@ if __name__ == "__main__":
                                                                                                NO_SIMILAR_HYPOTHESIS],
                                                                                            no_retrieved_facts=
                                                                                            chosen_model_params[
-                                                                                               NO_FACTS_TO_RETRIEVE],
+                                                                                               NO_FACTS_TO_RETRIEVE_CENTRAL],
                                                                                            only_central=True,
                                                                                            retrieved_facts_sep=CENTRAL_FACTS_SEP)
             print("finished retrieving central facts")
@@ -81,7 +81,7 @@ if __name__ == "__main__":
                                                                                                    NO_SIMILAR_HYPOTHESIS],
                                                                                                no_retrieved_facts=
                                                                                                chosen_model_params[
-                                                                                                   NO_FACTS_TO_RETRIEVE],
+                                                                                                   NO_FACTS_TO_RETRIEVE_GROUNDING],
                                                                                                only_grounding=True,
                                                                                                retrieved_facts_sep=GROUNDING_FACTS_SEP)
             print("finished retrieving grounding facts")
@@ -92,7 +92,7 @@ if __name__ == "__main__":
                                                                                                NO_SIMILAR_HYPOTHESIS],
                                                                                            no_retrieved_facts=
                                                                                            chosen_model_params[
-                                                                                               NO_FACTS_TO_RETRIEVE],
+                                                                                               NO_FACTS_TO_RETRIEVE_LEXGLUE],
                                                                                            only_lexglue=True,
                                                                                            retrieved_facts_sep=LEXGLUE_FACTS_SEP)
             print("finished retrieving lexglue facts")

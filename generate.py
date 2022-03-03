@@ -1,13 +1,7 @@
 import torch
 
 from model_params import *
-from generate_v2_data import GROUNDING, LEXGLUE, CENTRAL, explanatory_role_to_sep
-
-# todo put in a common file
-CENTRAL_RETRIEVED = "CENTRAL_RETRIEVED"
-GROUNDING_RETRIEVED = "GROUNDING_RETRIEVED"
-LEXGLUE_RETRIEVED = "LEXGLUE_RETRIEVED"
-
+from wtv2_constants import *
 
 def generate(epoch, tokenizer, model, device, loader, chosen_model_params):
     # a switch for some kind of layers that behave differently during training and inference

@@ -1,7 +1,7 @@
 import json
 import random
 import sys
-
+from wtv2_constants import *
 import pandas as pd
 
 from retrieve_prompt_generate.utils import Utils
@@ -15,21 +15,6 @@ import pickle
 from retrieve_prompt_generate.retrieve import fit_bm25_on_wtv2, sort_facts_based_on_similarity_to_question
 
 facts_dict = {}
-
-explanatory_role_to_sep = {
-    "CENTRAL": " && ",
-    "GROUNDING": " $$ ",
-    "BACKGROUND": " $$ ",
-    "LEXGLUE": " %% "
-}
-
-CENTRAL = "CENTRAL"
-GROUNDING = "GROUNDING"
-BACKGROUND = "BACKGROUND"
-LEXGLUE = "LEXGLUE"
-
-allowed_explanatory_roles = {CENTRAL, GROUNDING, BACKGROUND, LEXGLUE}
-
 
 def display_df(df):
     table = Table(
@@ -191,15 +176,6 @@ def contains_wrong_explanatory_role(roles):
         if role not in allowed_explanatory_roles:
             return True
     return False
-
-
-def get_training_exp_role_from_wtv2_exp_role(role):
-    # word tree has an extra role: background -> we treat it as grounding
-    # word tree has some weird roles: "ROLE", "NER"
-    if role == BACKGROUND:
-        return GROUNDING
-    else:
-        return role
 
 
 def construct_data_table_with_explanatory_role_chains(data_json, hypotheses_json,

@@ -60,6 +60,80 @@ def get_figure():
     FIGURE_COUNTER += 1
     return f
 
+def pprint_chain_retrieve_results(generated_csv_path):
+    actuals = []
+
+    actuals_for_each_exp_role = pd.read_csv("./data/v2-proper-data/test_data_wed_chains.csv", sep="\t")["explanation"]
+    for i in range(0, len(actuals_for_each_exp_role), 3):
+        central_actual = actuals_for_each_exp_role[i]
+        grounding_actual = actuals_for_each_exp_role[i+1]
+        lexglue_actual = actuals_for_each_exp_role[i+2]
+        actuals.append("||".join([central_actual, grounding_actual, lexglue_actual]))
+
+
+    df = pd.read_csv(generated_csv_path)
+    questions = df["Questions"]
+    #actuals = df["Actual Text"]
+    generated = df["Generated Text"]
+    central_retrieved = df["CENTRAL_RETRIEVED"]
+    grounding_retrieved = df["GROUNDING_RETRIEVED"]
+    lexglue_retrieved = df["LEXGLUE_RETRIEVED"]
+    scores = df[BLEURT_SCORES]
+
+    for i in range(len(questions)):
+        question_generated_list = generated[i].split(EXPLANATORY_ROLES_FACTS_SEP)
+        question_actual_list = actuals[i].split(EXPLANATORY_ROLES_FACTS_SEP)
+
+        print("Question - Score ({0})".format(scores[i]))
+        print(questions[i])
+
+        print("Actual Centrals:")
+        question_actual_centrals = question_actual_list[0].split(CENTRAL_FACTS_SEP)
+        for j, exp in enumerate(question_actual_centrals):
+            print("\t", j, ".\t", exp)
+
+        print("Retrieved Centrals:")
+        question_retrieved_centrals = central_retrieved[i].split(CENTRAL_FACTS_SEP)
+        for j, exp in enumerate(question_retrieved_centrals):
+            print("\t", j, ".\t", exp)
+
+        print("Generated Centrals:")
+        question_generated_centrals = question_generated_list[0].split(CENTRAL_FACTS_SEP)
+        for j, exp in enumerate(question_generated_centrals):
+            print("\t", j, ".\t", exp)
+
+        print("Actual Groundings:")
+        question_actual_grounding = question_actual_list[1].split(GROUNDING_FACTS_SEP)
+        for j, exp in enumerate(question_actual_grounding):
+            print("\t", j, ".\t", exp)
+
+        print("Retrieved Grounding:")
+        question_retrieved_grounding = grounding_retrieved[i].split(GROUNDING_FACTS_SEP)
+        for j, exp in enumerate(question_retrieved_grounding):
+            print("\t", j, ".\t", exp)
+
+        print("Generated Grounding:")
+        question_generated_grounding = question_generated_list[1].split(GROUNDING_FACTS_SEP)
+        for j, exp in enumerate(question_generated_grounding):
+            print("\t", j, ".\t", exp)
+
+        print("Actual Lexglue:")
+        question_actual_lexglue = question_actual_list[2].split(LEXGLUE_FACTS_SEP)
+        for j, exp in enumerate(question_actual_lexglue):
+            print("\t", j, ".\t", exp)
+
+        print("Retrieved Lexglue:")
+        question_retrieved_lexglue = lexglue_retrieved[i].split(LEXGLUE_FACTS_SEP)
+        for j, exp in enumerate(question_retrieved_lexglue):
+            print("\t", j, ".\t", exp)
+
+        print("Generated Lexglue:")
+        question_generated_lexglue = question_generated_list[2].split(LEXGLUE_FACTS_SEP)
+        for j, exp in enumerate(question_generated_lexglue):
+            print("\t", j, ".\t", exp)
+
+        print("==" * 15)
+
 
 def pprint_best_worst_results(results):
     for result in results:
@@ -540,6 +614,33 @@ def no_generated_explanations_vs_no_explanations_copied_from_input(questions_and
     figure.show()
 
 
+def get_no_retrieved_samples_copied_to_output(generated_with_seperater, retrieved_with_separator, gen_facts_sep="$$", ret_facts_sep="££"):
+    assert len(generated_with_seperater) == len(retrieved_with_separator)
+
+    no_copied_arr = []
+    no_copied_no_rep_arr = []
+
+    for i in range(len(retrieved_with_separator)):
+        input_facts = retrieved_with_separator[i].split(ret_facts_sep)
+        gen_facts = generated_with_seperater[i].split(gen_facts_sep)
+
+        input_facts_bows = [get_bow_of_fact(input_fact) for input_fact in input_facts]
+        gen_facts_bows = [get_bow_of_fact(gen_fact) for gen_fact in gen_facts]
+
+        no_copied_facts = 0
+        no_copied_facts_no_rep = 0
+
+        for input_fact_bow in input_facts_bows:
+            count = gen_facts_bows.count(input_fact_bow)
+            if count > 0:
+                no_copied_facts_no_rep += 1
+                no_copied_facts += count
+
+        no_copied_arr.append(no_copied_facts)
+        no_copied_no_rep_arr.append(no_copied_facts_no_rep)
+
+    return no_copied_arr, no_copied_no_rep_arr
+
 # how faithful should the model ideally be? not really insightful since it will tend to copy more
 # when it needs to generate more facts, and when it generates more facts score tends to be less
 def no_facts_copied_from_input_vs_score(questions_and_answers_with_seperator, generated_explanations_with_separator,
@@ -646,6 +747,8 @@ def preprocess_predictions_df(df):
 
 
 if __name__ == "__main__":
+
+
     df_predictions = pd.read_csv(DEV_PREDICTIONS_CSV_PATH, delimiter=",")
 
     (questions_and_answers, questions_and_answers_with_separator,
@@ -664,7 +767,7 @@ if __name__ == "__main__":
                                                                                          "Questions"])
         # save new csv with scores
         df_predictions["bleurt_scores"] = bleurt_scores
-        df_predictions.to_csv(DEV_PREDICTIONS_CSV_PATH.replace(".csv", "_generated_no_exact_repitition.csv"))
+        df_predictions.to_csv(DEV_PREDICTIONS_CSV_PATH.replace(".csv", "_no_rep_with_bleurt_scores.csv"))
 
     no_facts_in_reference_vs_no_facts_in_generated(reference_text_with_separator, generated_text_with_separator,
                                                    show_total_no_generated_facts=True,
