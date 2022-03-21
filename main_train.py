@@ -1,5 +1,5 @@
 import pandas as pd
-from train import trainer
+from train import trainer, metric_agnostic_trainer
 from model_params import *
 from retrieve_prompt_generate import retrieve
 from main_eval import CENTRAL_FACTS_SEP, GROUNDING_FACTS_SEP, LEXGLUE_FACTS_SEP
@@ -19,7 +19,7 @@ path_dev_chains = None
 if __name__ == "__main__":
 
     ####################### CHANGE AS APPROPRRIATE #######################
-    chosen_model_params = bart_chain_inference_steps
+    chosen_model_params = bart_plain_model_params
     for k, v in chosen_model_params.items():
         print(k, ":\t", v)
     ######################################################################
@@ -59,6 +59,9 @@ if __name__ == "__main__":
     if chosen_model_params[CHAIN]:
         df_train_chains = pd.read_csv(chosen_model_params[TRAIN_CHAIN_CSV_PATH], delimiter="\t")
         df_dev_chains = pd.read_csv(chosen_model_params[DEV_CHAINS_CSV_PATH], delimiter="\t")
+    else:
+        df_train_chains = None
+        df_dev_chains = None
 
     if chosen_model_params[AUGMENT_INPUT_WITH_RETRIEVED_FACTS]:
         if chosen_model_params[CHAIN]:
@@ -189,7 +192,7 @@ if __name__ == "__main__":
     else:
         validation_loader2 = None
 
-    trainer(model=model, tokenizer=tokenizer, optimizer=optimizer, training_loader=training_loader,
+    metric_agnostic_trainer(model=model, tokenizer=tokenizer, optimizer=optimizer, training_loader=training_loader,
             validation_loader=validation_loader,
             validation_loader2=validation_loader2, chosen_model_params=chosen_model_params,
             output_dir="./outputs")

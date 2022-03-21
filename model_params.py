@@ -55,20 +55,39 @@ t5_model_params = {
     "CHAIN": False
 }
 
-bart_model_params = {
+bart_plain_model_params = {
     "MODEL": "facebook/bart-base",
     "TRAIN_BATCH_SIZE": 4,
     "VALID_BATCH_SIZE": 4,
-    "TRAIN_EPOCHS": 10,
+    "TRAIN_EPOCHS": 15,
     "VAL_EPOCHS": 1,
     "LEARNING_RATE": 3e-5,
     "MAX_SOURCE_TEXT_LENGTH": 256,
     "MAX_TARGET_TEXT_LENGTH": 256,
     "SEED": 42,
     "AUGMENT_INPUT_WITH_RETRIEVED_FACTS": False,
+    "NO_SIMILAR_HYPOTHESIS": 0,
+    "NO_FACTS_TO_RETRIEVE": 0,
+    "ONLY_CETRAL": False,
+    "TRAIN_ON": QUESTION_AND_ANSWER,
+    "CHAIN": False
+}
+
+
+bart_retrieve_model_params = {
+    "MODEL": "facebook/bart-base",
+    "TRAIN_BATCH_SIZE": 4,
+    "VALID_BATCH_SIZE": 4,
+    "TRAIN_EPOCHS": 15,
+    "VAL_EPOCHS": 1,
+    "LEARNING_RATE": 3e-5,
+    "MAX_SOURCE_TEXT_LENGTH": 256,
+    "MAX_TARGET_TEXT_LENGTH": 256,
+    "SEED": 42,
+    "AUGMENT_INPUT_WITH_RETRIEVED_FACTS": True,
     "NO_SIMILAR_HYPOTHESIS": 20,
     "NO_FACTS_TO_RETRIEVE": 6,
-    "ONLY_CETRAL": True,
+    "ONLY_CETRAL": False,
     "TRAIN_ON": QUESTION_AND_ANSWER,
     "CHAIN": False
 }
@@ -77,7 +96,7 @@ bart_chain_model_params = {
     "MODEL": "facebook/bart-base",
     "TRAIN_BATCH_SIZE": 6,
     "VALID_BATCH_SIZE": 6,
-    "TRAIN_EPOCHS": 10,
+    "TRAIN_EPOCHS": 15,
     "VAL_EPOCHS": 1,
     "LEARNING_RATE": 3e-5,
     "MAX_SOURCE_TEXT_LENGTH": 256,
@@ -97,7 +116,7 @@ bart_chain_retrieve_model_params = {
     "MODEL": "facebook/bart-base",
     "TRAIN_BATCH_SIZE": 6,
     "VALID_BATCH_SIZE": 6,
-    "TRAIN_EPOCHS": 10,
+    "TRAIN_EPOCHS": 15,
     "VAL_EPOCHS": 1,
     "LEARNING_RATE": 3e-5,
     "MAX_SOURCE_TEXT_LENGTH": 280,
@@ -120,12 +139,13 @@ bart_chain_retrieve_model_params = {
     NO_FACTS_TO_RETRIEVE_LEXGLUE: 3
 }
 
+
 # retrieve differentn number of facts for central etc
 bart_chain_retrieve_different_model_params = {
     "MODEL": "facebook/bart-base",
     "TRAIN_BATCH_SIZE": 6,
     "VALID_BATCH_SIZE": 6,
-    "TRAIN_EPOCHS": 10,
+    "TRAIN_EPOCHS": 15,
     "VAL_EPOCHS": 1,
     "LEARNING_RATE": 3e-5,
     "MAX_SOURCE_TEXT_LENGTH": 280,
@@ -150,12 +170,11 @@ bart_chain_retrieve_different_model_params = {
 
 
 
-
 bart_chain_grounding_first_model_params = {
     "MODEL": "facebook/bart-base",
     "TRAIN_BATCH_SIZE": 6,
     "VALID_BATCH_SIZE": 6,
-    "TRAIN_EPOCHS": 10,
+    "TRAIN_EPOCHS": 15,
     "VAL_EPOCHS": 1,
     "LEARNING_RATE": 3e-5,
     "MAX_SOURCE_TEXT_LENGTH": 256,
@@ -179,7 +198,7 @@ bart_chain_no_dep = {
     "MODEL": "facebook/bart-base",
     "TRAIN_BATCH_SIZE": 6,
     "VALID_BATCH_SIZE": 6,
-    "TRAIN_EPOCHS": 10,
+    "TRAIN_EPOCHS": 15,
     "VAL_EPOCHS": 1,
     "LEARNING_RATE": 3e-5,
     "MAX_SOURCE_TEXT_LENGTH": 256,
@@ -203,7 +222,7 @@ bart_chain_inference_steps = {
     "MODEL": "facebook/bart-base",
     "TRAIN_BATCH_SIZE": 10,
     "VALID_BATCH_SIZE": 20,
-    "TRAIN_EPOCHS": 10,
+    "TRAIN_EPOCHS": 15,
     "VAL_EPOCHS": 1,
     "LEARNING_RATE": 3e-5,
     "MAX_SOURCE_TEXT_LENGTH": 256,

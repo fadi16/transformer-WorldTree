@@ -3,7 +3,7 @@ import torch
 from model_params import *
 from wtv2_constants import *
 
-def generate(epoch, tokenizer, model, device, loader, chosen_model_params):
+def generate(epoch, tokenizer, model, device, loader, chosen_model_params, no_samples=None):
     # a switch for some kind of layers that behave differently during training and inference
     # common practise in evaluations is to use model.eval() with torch.no_grad() to turn off grad
     # computation during inference which speeds up computation cuz grads are not used for inference
@@ -46,9 +46,13 @@ def generate(epoch, tokenizer, model, device, loader, chosen_model_params):
                     print("input:", inputs[i])
                     print("predicted_explanations:", predicted_explanations[i])
                     print("actual_explanations:", actual_explanations[i])
+
             predictions.extend(predicted_explanations)
             actuals.extend(actual_explanations)
             questions.extend(inputs)
+
+            if no_samples is not None and no_samples >= _:
+                break
 
     return questions, predictions, actuals
 
@@ -119,7 +123,7 @@ def generate_with_inference_chains(epoch, tokenizer, model, device, loader, mode
 
 
 # loader here has to contain a normal / not chained dataset
-def generate_with_chains(epoch, tokenizer, model, device, loader, model_params):
+def generate_with_chains(epoch, tokenizer, model, device, loader, model_params, no_samples=None):
     model.eval()
 
     predictions = []
@@ -201,12 +205,17 @@ def generate_with_chains(epoch, tokenizer, model, device, loader, model_params):
 
                 role_to_generated[role].extend(role_generated)
 
+
+
             predicted_explanations = []
             for i in range(len(input)):
                 predicted_explanations.append(
                     " || ".join([central_generated[i], grounding_generated[i], lexglue_generated[i]])
                 )
             predictions.extend(predicted_explanations)
+
+            if no_samples is not None and no_samples >= _:
+                break
 
     return questions, all_retrieved_central_facts, all_retrieved_grounding_facts, all_retrieved_lexglue_facts, predictions, actuals
 
