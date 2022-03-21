@@ -8,7 +8,6 @@ import torch
 import numpy as np
 from generate import generate, generate_with_chains, generate_with_inference_chains
 from torch.utils.tensorboard import SummaryWriter
-from main_eval import evaluate_bleurt, preprocess_predictions_df
 import rich
 from generate_v2_data import CENTRAL, GROUNDING, LEXGLUE
 
@@ -267,7 +266,7 @@ def metric_agnostic_trainer(model, tokenizer, optimizer, training_loader, valida
     for training_epoch in range(chosen_model_params[TRAIN_EPOCHS]):
         print("STARTING TRAINING EPOCH: " + str(training_epoch) + "\n")
         training_loss = train_step(training_epoch,tokenizer,model,device,training_loader,optimizer,training_logger)
-
+        print(f"training_loss = {training_loss}")
         tb.add_scalar("training_loss", training_loss, training_epoch)
 
         # evaluate at the end of each epoch
