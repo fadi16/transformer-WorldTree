@@ -74,3 +74,5 @@ def get_grid_search_params():
                     )
 
                     i += 1
+
+    return all_params
