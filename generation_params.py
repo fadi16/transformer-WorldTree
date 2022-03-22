@@ -60,7 +60,7 @@ def get_grid_search_params():
                 for t in ts:
                     all_params.append(
                         {
-                            NAME: "config{i}",
+                            NAME: f"config{i}",
                             P: p,
                             K: k,
                             SAMPLE: True,
