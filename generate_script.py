@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from transformers import T5ForConditionalGeneration, T5Tokenizer, BartForConditionalGeneration, BartTokenizer
 import pandas as pd
@@ -5,19 +6,21 @@ from model_params import *
 from wt_dataset import WorldTreeDataset, GROUNDING_RETRIEVED, CENTRAL_RETRIEVED, LEXGLUE_RETRIEVED
 from torch.utils.data import DataLoader
 from retrieve_prompt_generate import retrieve
-from generate import get_chain_source_ids_and_source_mask, generate_with_inference_chains
-from generate_v2_data import explanatory_role_to_sep, GROUNDING, BACKGROUND, CENTRAL, LEXGLUE
 from main_eval import CENTRAL_FACTS_SEP, GROUNDING_FACTS_SEP, LEXGLUE_FACTS_SEP
-from generate import generate, generate_with_chains
+from generate import generate, generate_with_chains, generate_with_inference_chains
+from postprocess import postprocess_explanation
+from eval_metrics import *
+from generation_params import *
 
 # todo: change checkpoint and file paths if needed
 #############################################
-OUTPUT_FILE_PATH = "evaluation/BART-chain-retrieve/validation_predictions_vs_actuals.csv"
-MODEL_CHECKPOINT_DIR_PATH = "./evaluation/BART-chain-retrieve/outputs/checkpoints"
+OUTPUT_FILE_PATH = "test.csv"
+MODEL_CHECKPOINT_DIR_PATH = "./evaluation/bart-plain-metric-agnostic/checkpoint"
 target_text = "explanation"
 TRAINING_CSV_PATH = "./data/v2-proper-data/train_data_wed.csv"
 TESTING_CSV_PATH = "./data/v2-proper-data/dev_data_wed.csv"
-chosen_model_params = bart_chain_retrieve_different_model_params
+chosen_model_params = bart_plain_model_params
+do_eval = True
 ##############################################
 
 if __name__ == "__main__":
@@ -31,7 +34,7 @@ if __name__ == "__main__":
         tokenizer = T5Tokenizer.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
         model = T5ForConditionalGeneration.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
 
-    df_test = pd.read_csv(TESTING_CSV_PATH, delimiter="\t")
+    df_test = pd.read_csv(TESTING_CSV_PATH, delimiter="\t")[:2]
     df_train = pd.read_csv(TRAINING_CSV_PATH, delimiter="\t")
 
     if chosen_model_params[AUGMENT_INPUT_WITH_RETRIEVED_FACTS]:
@@ -104,7 +107,7 @@ if __name__ == "__main__":
 
     testing_loader = DataLoader(
         dataset=testing_dataset,
-        batch_size=4,  # todo doesn't make a lot of sense why this works in validate
+        batch_size=8,
         shuffle=False,
         num_workers=0
     )
@@ -119,36 +122,50 @@ if __name__ == "__main__":
     model = model.to(device)
     model.eval()
 
-    with torch.no_grad():
+    grid_search_gen_params = get_grid_search_params()
+
+    best_bleurt_score = -1
+    best_config = None
+
+    postprocessed_actuals = None
+    
+    for num, gen_params in enumerate(grid_search_gen_params):
+
+        print(f"Generation Params : config{num} out of {len(grid_search_gen_params)}")
+        for k, v in gen_params.items():
+            print(f"{k}:\t{v}")
+
         if chosen_model_params[CHAIN]:
             if chosen_model_params[CHAIN_ON] == ROLE:
                 (questions, retrieved_central_facts, retrieved_grounding_facts,
                  retrieved_lexglue_facts, predictions, actuals) = generate_with_chains(0, tokenizer, model, device,
-                                                                                           testing_loader,
-                                                                                           chosen_model_params)
+                                                                                       testing_loader,
+                                                                                       chosen_model_params,
+                                                                                       gen_params=gen_params,
+                                                                                       verbose=False)
 
                 predictions_and_actuals_df = pd.DataFrame({
                     "Questions": df_test[chosen_model_params[TRAIN_ON]],
                     "Generated Text": predictions,
                     "Actual Text": actuals,
                     CENTRAL_RETRIEVED: retrieved_central_facts if retrieved_central_facts else ([" "] * len(actuals)),
-                    GROUNDING_RETRIEVED: retrieved_grounding_facts if retrieved_grounding_facts else ([" "] * len(actuals)),
+                    GROUNDING_RETRIEVED: retrieved_grounding_facts if retrieved_grounding_facts else (
+                                [" "] * len(actuals)),
                     LEXGLUE_RETRIEVED: retrieved_lexglue_facts if retrieved_lexglue_facts else ([" "] * len(actuals))
                 })
             elif chosen_model_params[CHAIN_ON] == PREVIOUS_SORTED:
-                questions, predictions, actuals = generate_with_inference_chains(epoch=0,
-                                                                                 tokenizer=tokenizer,
-                                                                                 loader=testing_loader,
-                                                                                 model=model,
-                                                                                 device=device,
-                                                                                 model_params=chosen_model_params)
+                questions, predictions, actuals = generate_with_inference_chains(0, tokenizer, model,
+                                                                                 device, testing_loader,
+                                                                                 chosen_model_params,
+                                                                                 gen_params, verbose=False)
                 predictions_and_actuals_df = pd.DataFrame({
                     "Questions": questions,
                     "Generated Text": predictions,
                     "Actual Text": actuals
                 })
         else:
-            questions, predictions, actuals = generate(0, tokenizer, model, device, testing_loader, chosen_model_params)
+            questions, predictions, actuals = generate(0, tokenizer, model, device, testing_loader, chosen_model_params,
+                                                       gen_params=gen_params, verbose=False)
 
             predictions_and_actuals_df = pd.DataFrame({
                 "Questions": df_test[chosen_model_params[TRAIN_ON]],
@@ -156,4 +173,80 @@ if __name__ == "__main__":
                 "Actual Text": actuals
             })
 
-    predictions_and_actuals_df.to_csv(OUTPUT_FILE_PATH)
+        if do_eval:
+            if not postprocessed_actuals:
+                postprocessed_actuals = [postprocess_explanation(actual_exp) for actual_exp in actuals]
+            postprocessed_generated = [postprocess_explanation(gen_exp) for gen_exp in predictions]
+
+            # bleurt
+            bleurt_scores = evaluate_bleurt(postprocessed_actuals, postprocessed_generated)
+            mean_bleurt = np.mean(bleurt_scores)
+
+            predictions_and_actuals_df["bleurt_score"] = bleurt_scores
+            print(f"mean_bleurt =\t{mean_bleurt}")
+
+            if mean_bleurt > best_bleurt_score:
+                best_bleurt_score = mean_bleurt
+                best_config = gen_params
+                print(f"best_bleurt_score = {best_bleurt_score}")
+
+            predictions_and_actuals_df.to_csv(f"{gen_params[NAME]}.csv")
+            print("**" * 20)
+
+            # bleu4_scores = evaluate_bleu(postprocessed_actuals, postprocessed_generated, "bleu4")
+            # mean_bleu4 = np.mean(bleu4_scores)
+            #
+            # predictions_and_actuals_df["bleu4_score"] = bleu4_scores
+            # print(f"mean_bleu4 =\t{mean_bleu4}")
+            #
+            # # rouge-l-sum
+            # rouge_l_sum_p_scores, rouge_l_sum_r_scores, rouge_l_sum_f1_scores = evaluate_rouge(postprocessed_actuals,
+            #                                                                                    postprocessed_generated,
+            #                                                                                    "rougeLsum")
+            #
+            # mean_rouge_l_sum_p = np.mean(rouge_l_sum_p_scores)
+            # mean_rouge_l_sum_r = np.mean(rouge_l_sum_r_scores)
+            # mean_rouge_l_sum_f1 = np.mean(rouge_l_sum_f1_scores)
+            #
+            # predictions_and_actuals_df["rouge_l_sum_p_score"] = rouge_l_sum_p_scores
+            # predictions_and_actuals_df["rouge_l_sum_r_score"] = rouge_l_sum_r_scores
+            # predictions_and_actuals_df["rouge_l_sum_f1_score"] = rouge_l_sum_f1_scores
+            #
+            # print(f"mean_rouge_l_sum_p =\t{mean_rouge_l_sum_p}")
+            # print(f"mean_rouge_l_sum_r =\t{mean_rouge_l_sum_r}")
+            # print(f"mean_rouge_l_sum_f1 =\t{mean_rouge_l_sum_f1}")
+            #
+            # # rouge-4
+            # rouge4_p_scores, rouge4_r_scores, rouge4_f1_scores = evaluate_rouge(postprocessed_actuals,
+            #                                                                     postprocessed_generated, "rouge4")
+            # mean_rouge4_p = np.mean(rouge4_p_scores)
+            # mean_rouge4_r = np.mean(rouge4_r_scores)
+            # mean_rouge4_f1 = np.mean(rouge4_f1_scores)
+            #
+            # predictions_and_actuals_df["rouge_4_score_p"] = rouge4_p_scores
+            # predictions_and_actuals_df["rouge_4_score_r"] = rouge4_r_scores
+            # predictions_and_actuals_df["rouge_4_score_f1"] = rouge4_f1_scores
+            #
+            # print(f"mean_rouge4_p =\t{mean_rouge4_p}")
+            # print(f"mean_rouge4_r =\t{mean_rouge4_r}")
+            # print(f"mean_rouge4_f1 =\t{mean_rouge4_f1}")
+            #
+            # # relevance, completeness, binary completeness, f-measure
+            # question_ids = df_test["question_id"]
+            # relevance_scores, completeness_scores, binary_completeness_scores, f_measure_relevance_completeness_scores = evaluate_relevance_and_completeness(
+            #     question_ids, postprocessed_generated)
+            #
+            # mean_relevance = np.mean(relevance_scores)
+            # mean_completeness = np.mean(completeness_scores)
+            # mean_binary_completeness = np.mean(binary_completeness_scores)
+            # mean_relevance_completeness_f_measure = np.mean(f_measure_relevance_completeness_scores)
+            #
+            # print(f"mean_relevance =\t{mean_relevance}")
+            # print(f"mean_completeness =\t{mean_completeness}")
+            # print(f"mean_binary_completeness =\t{mean_binary_completeness}")
+            # print(f"mean_relevance_completeness_f_measure =\t{mean_relevance_completeness_f_measure}")
+            #
+            # predictions_and_actuals_df["relevance_score"] = relevance_scores
+            # predictions_and_actuals_df["completeness_score"] = completeness_scores
+            # predictions_and_actuals_df["binary_completeness_score"] = binary_completeness_scores
+            # predictions_and_actuals_df["f_measure_relevance_completeness_score"] = f_measure_relevance_completeness_scores

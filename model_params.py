@@ -108,6 +108,9 @@ bart_chain_model_params = {
     "ONLY_CETRAL": False,
     "TRAIN_ON": QUESTION_AND_ANSWER,
     "CHAIN": True,
+    "TRAIN_CHAIN_CSV_PATH": "data/v2-proper-data/train_data_wed_chains.csv",
+    "DEV_CHAINS_CSV_PATH": "data/v2-proper-data/dev_data_wed_chains.csv",
+    "DEV_CSV_PATH": "data/v2-proper-data/dev_data_wed.csv",
     "NO_CHAIN_DEP": False,
     CHAIN_ON: ROLE
 }

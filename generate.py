@@ -2,11 +2,13 @@ import torch
 
 from model_params import *
 from wtv2_constants import *
+from generation_params import *
 
-def generate(epoch, tokenizer, model, device, loader, chosen_model_params, no_samples=None):
-    # a switch for some kind of layers that behave differently during training and inference
-    # common practise in evaluations is to use model.eval() with torch.no_grad() to turn off grad
-    # computation during inference which speeds up computation cuz grads are not used for inference
+
+def generate(epoch, tokenizer, model, device, loader, chosen_model_params, no_samples=None, gen_params=None, verbose=True):
+    if gen_params is None:
+        gen_params = default_gen_params
+
     model.eval()
 
     predictions = []
@@ -26,10 +28,10 @@ def generate(epoch, tokenizer, model, device, loader, chosen_model_params, no_sa
                 input_ids=source_ids,
                 attention_mask=source_mask,
                 max_length=chosen_model_params[MAX_TARGET_TEXT_LENGTH],
-                num_beams=2,  # todo: how come?
-                repetition_penalty=2.5,
-                length_penalty=1.0,
-                early_stopping=True
+                num_beams=gen_params[BEAM_SIZE],
+                repetition_penalty=gen_params[REPETITION_PENALTY],
+                length_penalty=gen_params[LENGTH_PENALTY],
+                early_stopping=gen_params[EARLY_STOPPING]
             )
 
             predicted_explanations = [
@@ -39,7 +41,7 @@ def generate(epoch, tokenizer, model, device, loader, chosen_model_params, no_sa
                                    id in target_ids]
             inputs = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True) for id in
                       source_ids]
-            if _ % 10 == 0:
+            if _ % 10 == 0 and verbose:
                 for i in range(len(inputs)):
                     print("-------------------------------------------------")
                     print("SHOWING EXAMPLE:")
@@ -57,6 +59,7 @@ def generate(epoch, tokenizer, model, device, loader, chosen_model_params, no_sa
     return questions, predictions, actuals
 
 
+# todo: if you want to try u need to add gen params
 def generate_with_inference_chains(epoch, tokenizer, model, device, loader, model_params):
     model.eval()
 
@@ -79,7 +82,8 @@ def generate_with_inference_chains(epoch, tokenizer, model, device, loader, mode
             questions.extend(input)
             batch_size = len(input)
 
-            inference_step_to_generated = dict(zip([i for i in range(model_params[NO_INFERENCE_STEPS] + 1)], [[] for _ in range(model_params[NO_INFERENCE_STEPS] + 1)]))
+            inference_step_to_generated = dict(zip([i for i in range(model_params[NO_INFERENCE_STEPS] + 1)],
+                                                   [[] for _ in range(model_params[NO_INFERENCE_STEPS] + 1)]))
 
             # for first inference step
             sources = input
@@ -115,7 +119,8 @@ def generate_with_inference_chains(epoch, tokenizer, model, device, loader, mode
             predicted_explanations = []
             for batch_index in range(batch_size):
                 predicted_explanations.append(
-                    " || ".join([inference_step_to_generated[inference_step][batch_index] for inference_step in range(model_params[NO_INFERENCE_STEPS] + 1)])
+                    " || ".join([inference_step_to_generated[inference_step][batch_index] for inference_step in
+                                 range(model_params[NO_INFERENCE_STEPS] + 1)])
                 )
             predictions.extend(predicted_explanations)
 
@@ -123,7 +128,10 @@ def generate_with_inference_chains(epoch, tokenizer, model, device, loader, mode
 
 
 # loader here has to contain a normal / not chained dataset
-def generate_with_chains(epoch, tokenizer, model, device, loader, model_params, no_samples=None):
+def generate_with_chains(epoch, tokenizer, model, device, loader, model_params, no_samples=None, gen_params=None, verbose=True):
+    if gen_params is None:
+        gen_params = default_gen_params
+
     model.eval()
 
     predictions = []
@@ -195,17 +203,15 @@ def generate_with_chains(epoch, tokenizer, model, device, loader, model_params, 
                     input_ids=role_source_ids,
                     attention_mask=role_source_mask,
                     max_length=model_params[MAX_TARGET_TEXT_LENGTH],
-                    num_beams=2,
-                    repetition_penalty=2.5,
-                    length_penalty=1.0,
-                    early_stopping=True
+                    num_beams=gen_params[BEAM_SIZE],
+                    repetition_penalty=gen_params[REPETITION_PENALTY],
+                    length_penalty=gen_params[LENGTH_PENALTY],
+                    early_stopping=gen_params[EARLY_STOPPING]
                 )
                 role_generated = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True)
                                   for id in role_generated_ids]
 
                 role_to_generated[role].extend(role_generated)
-
-
 
             predicted_explanations = []
             for i in range(len(input)):
