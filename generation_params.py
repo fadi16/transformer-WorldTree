@@ -35,7 +35,7 @@ def get_grid_search_params():
         for rp in repetition_penalties:
             all_params.append(
                 {
-                    NAME: "config{i}",
+                    NAME: f"config{i}",
                     P: 1,  # default
                     K: 50,  # default
                     SAMPLE: False,  # default,
