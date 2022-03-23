@@ -27,8 +27,8 @@ def get_grid_search_params():
 
     inference_batch_size = 8
 
-    beam_sizes = [16, 4, 8]
-    repetition_penalties = [1.2, 1.7, 2.5, 3.0]
+    beam_sizes = [16, 4, 8, 2, 1]
+    repetition_penalties = [1.0, 1.5, 2.3, 3.0]
 
     i = 0
     for bs in beam_sizes:
@@ -50,29 +50,26 @@ def get_grid_search_params():
 
             i += 1
 
-    ps = [1.0, 0.95]
-    ks = [60, 80]
-    ts = [0.9, 0.95]
+    # different configs of p, k, t give same bleurt score
+    # top-k top-p works best without repitition penalty
+    p = 0.95
+    k = 70
+    t = 0.95
 
-    for rp in repetition_penalties:
-        for p in ps:
-            for k in ks:
-                for t in ts:
-                    all_params.append(
-                        {
-                            NAME: f"config{i}",
-                            P: p,
-                            K: k,
-                            SAMPLE: True,
-                            BEAM_SIZE: 1,
-                            TEMPERATURE: t,
-                            REPETITION_PENALTY: rp,
-                            EARLY_STOPPING: False,
-                            LENGTH_PENALTY: 1.0,
-                            INFERENCE_BATCH_SIZE: inference_batch_size
-                        }
-                    )
+    all_params.append(
+        {
+            NAME: f"config{i}",
+            P: p,
+            K: k,
+            SAMPLE: True,
+            BEAM_SIZE: 1,
+            TEMPERATURE: t,
+            REPETITION_PENALTY: rp,
+            EARLY_STOPPING: False,
+            LENGTH_PENALTY: 1.0,
+            INFERENCE_BATCH_SIZE: inference_batch_size
+        }
+    )
 
-                    i += 1
 
     return all_params

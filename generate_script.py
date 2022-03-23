@@ -11,7 +11,7 @@ from generate import generate, generate_with_chains, generate_with_inference_cha
 from postprocess import postprocess_explanation
 from eval_metrics import *
 from generation_params import *
-
+import pickle
 # todo: change checkpoint and file paths if needed
 #############################################
 OUTPUT_FILE_PATH = "test.csv"
@@ -34,7 +34,7 @@ if __name__ == "__main__":
         tokenizer = T5Tokenizer.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
         model = T5ForConditionalGeneration.from_pretrained(pretrained_model_name_or_path=MODEL_CHECKPOINT_DIR_PATH)
 
-    df_test = pd.read_csv(TESTING_CSV_PATH, delimiter="\t")[:2]
+    df_test = pd.read_csv(TESTING_CSV_PATH, delimiter="\t")
     df_train = pd.read_csv(TRAINING_CSV_PATH, delimiter="\t")
 
     if chosen_model_params[AUGMENT_INPUT_WITH_RETRIEVED_FACTS]:
@@ -128,7 +128,10 @@ if __name__ == "__main__":
     best_config = None
 
     postprocessed_actuals = None
-    
+
+    scores = []
+    configs = []
+
     for num, gen_params in enumerate(grid_search_gen_params):
 
         print(f"Generation Params : config{num} out of {len(grid_search_gen_params)}")
@@ -153,6 +156,17 @@ if __name__ == "__main__":
                                 [" "] * len(actuals)),
                     LEXGLUE_RETRIEVED: retrieved_lexglue_facts if retrieved_lexglue_facts else ([" "] * len(actuals))
                 })
+
+                print(f"question: {questions[0]}")
+                if retrieved_central_facts:
+                    print(f"retrieved_central: {retrieved_central_facts[0]}")
+                if retrieved_grounding_facts:
+                    print(f"retrieved_grounding: {retrieved_grounding_facts[0]}")
+                if retrieved_lexglue_facts:
+                    print(f"retrieved_lexglue: {retrieved_lexglue_facts[0]}")
+                print(f"actual: {actuals[0]}")
+                print(f"predicted = {predictions[0]}")
+
             elif chosen_model_params[CHAIN_ON] == PREVIOUS_SORTED:
                 questions, predictions, actuals = generate_with_inference_chains(0, tokenizer, model,
                                                                                  device, testing_loader,
@@ -174,6 +188,7 @@ if __name__ == "__main__":
             })
 
         if do_eval:
+
             if not postprocessed_actuals:
                 postprocessed_actuals = [postprocess_explanation(actual_exp) for actual_exp in actuals]
             postprocessed_generated = [postprocess_explanation(gen_exp) for gen_exp in predictions]
@@ -181,6 +196,9 @@ if __name__ == "__main__":
             # bleurt
             bleurt_scores = evaluate_bleurt(postprocessed_actuals, postprocessed_generated)
             mean_bleurt = np.mean(bleurt_scores)
+
+            scores.append(mean_bleurt)
+            configs.append(gen_params)
 
             predictions_and_actuals_df["bleurt_score"] = bleurt_scores
             print(f"mean_bleurt =\t{mean_bleurt}")
@@ -192,6 +210,15 @@ if __name__ == "__main__":
 
             predictions_and_actuals_df.to_csv(f"{gen_params[NAME]}.csv")
             print("**" * 20)
+
+    print("Best Configuration:")
+    print(best_config)
+    print("Best Score:")
+    print(best_bleurt_score)
+
+    f = open("configs_and_scores.pkl", "wb")
+    pickle.dump(zip(configs, scores), f)
+
 
             # bleu4_scores = evaluate_bleu(postprocessed_actuals, postprocessed_generated, "bleu4")
             # mean_bleu4 = np.mean(bleu4_scores)
