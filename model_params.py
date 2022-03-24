@@ -32,7 +32,6 @@ PREVIOUS_SORTED = "PREVIOUS_SORTED"
 ROLE = "ROLE"
 NO_INFERENCE_STEPS = "NO_INFERENCE_STEPS"
 
-
 NO_FACTS_TO_RETRIEVE_CENTRAL = "NO_FACTS_TO_RETRIEVE_CENTRAL"
 NO_FACTS_TO_RETRIEVE_GROUNDING = "NO_FACTS_TO_RETRIEVE_GROUNDING"
 NO_FACTS_TO_RETRIEVE_LEXGLUE = "NO_FACTS_TO_RETRIEVE_LEXGLUE"
@@ -73,7 +72,6 @@ bart_plain_model_params = {
     "CHAIN": False
 }
 
-
 bart_retrieve_model_params = {
     "MODEL": "facebook/bart-base",
     "TRAIN_BATCH_SIZE": 4,
@@ -95,7 +93,7 @@ bart_retrieve_model_params = {
 bart_chain_model_params = {
     "MODEL": "facebook/bart-base",
     "TRAIN_BATCH_SIZE": 6,
-    "VALID_BATCH_SIZE": 6,
+    "VALID_BATCH_SIZE": 12,
     "TRAIN_EPOCHS": 15,
     "VAL_EPOCHS": 1,
     "LEARNING_RATE": 3e-5,
@@ -112,7 +110,8 @@ bart_chain_model_params = {
     "DEV_CHAINS_CSV_PATH": "data/v2-proper-data/dev_data_wed_chains.csv",
     "DEV_CSV_PATH": "data/v2-proper-data/dev_data_wed.csv",
     "NO_CHAIN_DEP": False,
-    CHAIN_ON: ROLE
+    CHAIN_ON: ROLE,
+    CENTRAL_FIRST: True
 }
 
 bart_chain_retrieve_model_params = {
@@ -142,7 +141,6 @@ bart_chain_retrieve_model_params = {
     NO_FACTS_TO_RETRIEVE_LEXGLUE: 3
 }
 
-
 # retrieve differentn number of facts for central etc
 bart_chain_retrieve_different_model_params = {
     "MODEL": "facebook/bart-base",
@@ -170,8 +168,6 @@ bart_chain_retrieve_different_model_params = {
     NO_FACTS_TO_RETRIEVE_GROUNDING: 2,
     NO_FACTS_TO_RETRIEVE_LEXGLUE: 1
 }
-
-
 
 bart_chain_grounding_first_model_params = {
     "MODEL": "facebook/bart-base",

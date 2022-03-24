@@ -15,11 +15,12 @@ import pickle
 # todo: change checkpoint and file paths if needed
 #############################################
 OUTPUT_FILE_PATH = "test.csv"
-MODEL_CHECKPOINT_DIR_PATH = "./evaluation/bart-plain-metric-agnostic/checkpoint"
+MODEL_CHECKPOINT_DIR_PATH = "./evaluation/bart-chain-retrieve-metric-agnostic/checkpoints"
 target_text = "explanation"
 TRAINING_CSV_PATH = "./data/v2-proper-data/train_data_wed.csv"
-TESTING_CSV_PATH = "./data/v2-proper-data/dev_data_wed.csv"
-chosen_model_params = bart_plain_model_params
+# todo
+TESTING_CSV_PATH = "./data/v2-proper-data/test_data_wed.csv"#"./data/v2-proper-data/dev_data_wed.csv"
+chosen_model_params = bart_chain_retrieve_model_params
 do_eval = True
 ##############################################
 
@@ -107,7 +108,7 @@ if __name__ == "__main__":
 
     testing_loader = DataLoader(
         dataset=testing_dataset,
-        batch_size=8,
+        batch_size=6,
         shuffle=False,
         num_workers=0
     )
@@ -132,7 +133,7 @@ if __name__ == "__main__":
     scores = []
     configs = []
 
-    for num, gen_params in enumerate(grid_search_gen_params):
+    for num, gen_params in enumerate([default_gen_params]):
 
         print(f"Generation Params : config{num} out of {len(grid_search_gen_params)}")
         for k, v in gen_params.items():
@@ -156,16 +157,17 @@ if __name__ == "__main__":
                                 [" "] * len(actuals)),
                     LEXGLUE_RETRIEVED: retrieved_lexglue_facts if retrieved_lexglue_facts else ([" "] * len(actuals))
                 })
-
-                print(f"question: {questions[0]}")
-                if retrieved_central_facts:
-                    print(f"retrieved_central: {retrieved_central_facts[0]}")
-                if retrieved_grounding_facts:
-                    print(f"retrieved_grounding: {retrieved_grounding_facts[0]}")
-                if retrieved_lexglue_facts:
-                    print(f"retrieved_lexglue: {retrieved_lexglue_facts[0]}")
-                print(f"actual: {actuals[0]}")
-                print(f"predicted = {predictions[0]}")
+                for i in range(len(questions)):
+                    print(f"question: {questions[i]}")
+                    if retrieved_central_facts:
+                        print(f"retrieved_central: {retrieved_central_facts[i]}")
+                    if retrieved_grounding_facts:
+                        print(f"retrieved_grounding: {retrieved_grounding_facts[i]}")
+                    if retrieved_lexglue_facts:
+                        print(f"retrieved_lexglue: {retrieved_lexglue_facts[i]}")
+                    print(f"actual: {actuals[i]}")
+                    print(f"predicted = {predictions[i]}")
+                    print("**" * 20)
 
             elif chosen_model_params[CHAIN_ON] == PREVIOUS_SORTED:
                 questions, predictions, actuals = generate_with_inference_chains(0, tokenizer, model,

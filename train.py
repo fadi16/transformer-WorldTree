@@ -3,6 +3,7 @@ import pandas as pd
 from rich import box
 from rich.table import Table, Column
 
+from main_eval import preprocess_predictions_df, evaluate_bleurt
 from model_params import *
 import torch
 import numpy as np
@@ -40,22 +41,30 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
     )
 
     best_val_score = -1
+    best_val_loss = 1000
 
     for training_epoch in range(chosen_model_params[TRAIN_EPOCHS]):
         print("STARTING TRAINING EPOCH: " + str(training_epoch) + "\n")
 
-        loss = train_step(epoch=training_epoch,
-                          tokenizer=tokenizer,
-                          model=model,
-                          device=device,
-                          loader=training_loader,
-                          optimizer=optimizer,
-                          logger=training_logger)
-        tb.add_scalar("Loss", loss, training_epoch)
+        training_loss = train_step(epoch=training_epoch,
+                                   tokenizer=tokenizer,
+                                   model=model,
+                                   device=device,
+                                   loader=training_loader,
+                                   optimizer=optimizer,
+                                   logger=training_logger)
+        tb.add_scalar("train_loss", training_loss, training_epoch)
+
+        print("training_loss = ", training_loss)
 
         # evaluate at the end of each epoch
         print("Validating after training epoch #{0}\n".format(str(training_epoch)))
         for validation_epoch in range(chosen_model_params[VAL_EPOCHS]):
+
+            val_loss = val_step(training_epoch, tokenizer, model, device, validation_loader)
+            tb.add_scalar("val_loss", val_loss, training_epoch)
+            print(f"validation_loss = {val_loss}")
+
             if chosen_model_params[CHAIN]:
                 if chosen_model_params[CHAIN_ON] == ROLE:
                     # overall bleurt scores
@@ -127,7 +136,7 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
                             "Generated Text": role_gen,
                             "Actual Text": role_ref
                         })
-                        role_df.to_csv("{0}_predictions.csv".format(role))
+                        role_df.to_csv("{0}_predictions_{1}.csv".format(role, training_epoch))
 
                 elif chosen_model_params[CHAIN_ON] == PREVIOUS_SORTED:
                     questions, predictions, actuals = generate_with_inference_chains(epoch=validation_epoch,
@@ -226,17 +235,22 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
 
             if eval_score > best_val_score:
                 best_val_score = eval_score
+
+            print("best_bleurt_score = ", best_val_score)
+
+            final_df.to_csv("predictions_{0}.csv", training_epoch)
+
+            if val_loss < best_val_loss:
                 # save predictions
-                final_df.to_csv(os.path.join(output_dir, "predictions.csv"))
-                print("SAVED PREDICTIONS AT " + os.path.join(output_dir, "predictions.csv") + "\n")
+                final_df.to_csv(os.path.join(output_dir, "best_predictions.csv"))
+                print("SAVED BEST PREDICTIONS (based on val loss) AT " + os.path.join(output_dir, "predictions.csv") + "\n")
                 # save model and tokenizer
                 model_checkpoint_path = os.path.join(output_dir, "checkpoints")
                 model.save_pretrained(model_checkpoint_path)
                 tokenizer.save_pretrained(model_checkpoint_path)
                 print("SAVED MODEL AT " + model_checkpoint_path + "\n")
 
-            print("VALIDATION DONE - BEST BLEURT SCORE = {0}, CURRENT BLEURT SCORE = {1}\n".format(best_val_score,
-                                                                                                   eval_score))
+            print("**" * 20)
 
 
 def metric_agnostic_trainer(model, tokenizer, optimizer, training_loader, validation_loader, validation_loader2,
@@ -265,7 +279,8 @@ def metric_agnostic_trainer(model, tokenizer, optimizer, training_loader, valida
 
     for training_epoch in range(chosen_model_params[TRAIN_EPOCHS]):
         print("STARTING TRAINING EPOCH: " + str(training_epoch) + "\n")
-        training_loss = train_step(training_epoch,tokenizer,model,device,training_loader,optimizer,training_logger)
+        training_loss = train_step(training_epoch, tokenizer, model, device, training_loader, optimizer,
+                                   training_logger)
         print(f"training_loss = {training_loss}")
         tb.add_scalar("training_loss", training_loss, training_epoch)
 
@@ -282,6 +297,10 @@ def metric_agnostic_trainer(model, tokenizer, optimizer, training_loader, valida
                                                                                      device=device,
                                                                                      model_params=chosen_model_params,
                                                                                      no_samples=5)
+                    print("retrieved_central = ", retrieved_central)
+                    print("retrieved_grounding = ", retrieved_grounding)
+                    print("retrieved_lexglue = ", retrieved_lexglue)
+
             else:
                 questions, predictions, actuals = generate(epoch=validation_epoch,
                                                            tokenizer=tokenizer,
@@ -326,16 +345,16 @@ def train_step(epoch, tokenizer, model, device, loader, optimizer, logger):
         outputs = model(
             input_ids=ids,  # ok
             attention_mask=mask,  # ok
-            decoder_input_ids=y_ids,  # todo this is not needed according to the documentation
+            decoder_input_ids=y_ids,
             labels=lm_labels
         )
 
         loss = outputs[0]
-        training_losses.append(loss.item())
 
-        if _ % 250 == 0:
-            logger.add_row(str(epoch), str(_), str(loss.item()))
-            rich.print(logger)
+        # todo don't log
+        # if _ % 250 == 0:
+        #     logger.add_row(str(epoch), str(_), str(loss))
+        #     rich.print(logger)
 
         # clears old gradients from last step - so that they do not accumulate everytime you do loss.backwards
         optimizer.zero_grad()
@@ -343,6 +362,9 @@ def train_step(epoch, tokenizer, model, device, loader, optimizer, logger):
         loss.backward()
         # gradient decent
         optimizer.step()
+
+        training_losses.append(loss.item())
+
     return np.mean(training_losses)
 
 

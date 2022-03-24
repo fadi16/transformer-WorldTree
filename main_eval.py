@@ -1,8 +1,12 @@
+import os
+import random
+import re
 import sys
 import heapq
 from typing import List
 
 import nltk
+from nltk.translate import bleu_score
 
 nltk.download('stopwords')
 # nltk.download("punc")
@@ -13,11 +17,14 @@ import matplotlib.pyplot as plt
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 from nltk.tokenize import RegexpTokenizer
+import nltk.translate.bleu_score
+from rouge_score import rouge_scorer
+from wtv2_constants import *
 
 ###############################################
 ## todo: change file path
 ###############################################
-DEV_PREDICTIONS_CSV_PATH = "evaluation/BART-retrieve-prompt/test_predictions_vs_actuals_no_rep_with_bleurt_scores.csv"  # "evaluation/t5-plain/validation_predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-t5-plain-from-hypothesis-with-data-splitting.csv"
+DEV_PREDICTIONS_CSV_PATH = "evaluation/BART-chain-retrieve/validation_predictions_vs_actuals_no_rep_with_bleurt_scores.csv"  # "evaluation/t5-plain/validation_predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-t5-plain-from-hypothesis-with-data-splitting.csv"
 # DEV_PREDICTIONS_CSV_PATH = "evaluation/t5-plain/validation_predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting_with_BLEURT_scores.csv"  # "evaluation/t5-plain/validation_predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv"  #"evaluation/BART-lr-3e-5/test_predictions_vs_actuals_with_BLEURT_scores.csv"  # "outputs/dummy_predicions_with_BLEURT_scores.csv"  # "./evaluation/predictions_vs_actuals-t5-plain-from-QnA-with-data-splitting.csv" #"./evaluation/predictions_vs_actuals-t5-plain-from-hypothesis-with-data-splitting.csv"
 TRAINING_DATA_CSV_PATH = "data/v2-proper-data/train_data_wed.csv"
 
@@ -32,23 +39,6 @@ stemmer = PorterStemmer()
 regexp_tokenizer = RegexpTokenizer(r'\w+')
 bleurt_metric = None
 
-MAIN_FACTS_SEP = "$$"
-EXPLANATORY_ROLES_FACTS_SEP = "||"
-CENTRAL_FACTS_SEP = "&&"
-GROUNDING_FACTS_SEP = "$$"
-BACKGROUND_FACTS_SEP = "$$"
-LEXGLUE_FACTS_SEP = "%%"
-QUESTION_AND_RETRIEVED_FACTS_SEP = "@@"
-RETRIEVED_FACTS_SEP = "££"
-START_SEP = "<start>"
-END_SEP = "<end>"
-
-ALL_FACTS_SEPARATORS = {
-    MAIN_FACTS_SEP, EXPLANATORY_ROLES_FACTS_SEP, CENTRAL_FACTS_SEP,
-    GROUNDING_FACTS_SEP, BACKGROUND_FACTS_SEP, LEXGLUE_FACTS_SEP,
-    QUESTION_AND_RETRIEVED_FACTS_SEP, RETRIEVED_FACTS_SEP, END_SEP
-}
-
 
 def show_plots():
     plt.show()
@@ -60,20 +50,20 @@ def get_figure():
     FIGURE_COUNTER += 1
     return f
 
+
 def pprint_chain_retrieve_results(generated_csv_path):
     actuals = []
 
     actuals_for_each_exp_role = pd.read_csv("./data/v2-proper-data/test_data_wed_chains.csv", sep="\t")["explanation"]
     for i in range(0, len(actuals_for_each_exp_role), 3):
         central_actual = actuals_for_each_exp_role[i]
-        grounding_actual = actuals_for_each_exp_role[i+1]
-        lexglue_actual = actuals_for_each_exp_role[i+2]
+        grounding_actual = actuals_for_each_exp_role[i + 1]
+        lexglue_actual = actuals_for_each_exp_role[i + 2]
         actuals.append("||".join([central_actual, grounding_actual, lexglue_actual]))
-
 
     df = pd.read_csv(generated_csv_path)
     questions = df["Questions"]
-    #actuals = df["Actual Text"]
+    # actuals = df["Actual Text"]
     generated = df["Generated Text"]
     central_retrieved = df["CENTRAL_RETRIEVED"]
     grounding_retrieved = df["GROUNDING_RETRIEVED"]
@@ -191,8 +181,7 @@ def no_hops_in_reference_vs_score(no_hops_reference, scores):
     figure.show()
 
 
-
-def evaluate(metric_key: str, questions, references, generated, best_and_worst=True):
+def evaluate_bleurt(metric_key: str, questions, references, generated, best_and_worst=True):
     global bleurt_metric
     if metric_key == "bleurt":
         if not bleurt_metric:
@@ -256,6 +245,8 @@ def evaluate(metric_key: str, questions, references, generated, best_and_worst=T
 
 
 def get_bow_of_fact(fact):
+    if fact.isspace() or fact == "":
+        raise Exception("fact can't be empty")
     tokenized_fact = regexp_tokenizer.tokenize(fact)
     return set(
         stemmer.stem(word.lower().strip()) for word in tokenized_fact if
@@ -614,32 +605,44 @@ def no_generated_explanations_vs_no_explanations_copied_from_input(questions_and
     figure.show()
 
 
-def get_no_retrieved_samples_copied_to_output(generated_with_seperater, retrieved_with_separator, gen_facts_sep="$$", ret_facts_sep="££"):
+def get_no_retrieved_samples_copied_to_output(generated_with_seperater, retrieved_with_separator,
+                                              actuals_with_separator, gen_facts_sep="$$", ret_facts_sep="££"):
     assert len(generated_with_seperater) == len(retrieved_with_separator)
 
     no_copied_arr = []
     no_copied_no_rep_arr = []
+    no_copied_correct_arr = []
 
     for i in range(len(retrieved_with_separator)):
         input_facts = retrieved_with_separator[i].split(ret_facts_sep)
         gen_facts = generated_with_seperater[i].split(gen_facts_sep)
+        # filter out empty facts
+        gen_facts = [fact for fact in gen_facts if fact != "" and not fact.isspace()]
+
+        actual_facts = actuals_with_separator[i].split(gen_facts_sep)
 
         input_facts_bows = [get_bow_of_fact(input_fact) for input_fact in input_facts]
         gen_facts_bows = [get_bow_of_fact(gen_fact) for gen_fact in gen_facts]
+        actual_facts_bows = [get_bow_of_fact(actual_fact) for actual_fact in actual_facts]
 
         no_copied_facts = 0
         no_copied_facts_no_rep = 0
+        no_copied_correct = 0
 
         for input_fact_bow in input_facts_bows:
             count = gen_facts_bows.count(input_fact_bow)
             if count > 0:
                 no_copied_facts_no_rep += 1
                 no_copied_facts += count
+                if input_fact_bow in actual_facts_bows:
+                    no_copied_correct += 1
 
         no_copied_arr.append(no_copied_facts)
         no_copied_no_rep_arr.append(no_copied_facts_no_rep)
+        no_copied_correct_arr.append(no_copied_correct)
 
-    return no_copied_arr, no_copied_no_rep_arr
+    return no_copied_arr, no_copied_no_rep_arr, no_copied_correct_arr
+
 
 # how faithful should the model ideally be? not really insightful since it will tend to copy more
 # when it needs to generate more facts, and when it generates more facts score tends to be less
@@ -676,26 +679,187 @@ def no_facts_copied_from_input_vs_score(questions_and_answers_with_seperator, ge
     figure.show()
 
 
-def get_generated_no_exact_repeated_facts(generated_text_with_separators):
+def get_generated_no_repeated_facts(generated_text_with_separators, bow_rep=False, new_sep="."):
     generated_no_exact_rep = []
     no_repeated_facts = 0
     no_generated_facts = 0
     for generated_exp in generated_text_with_separators:
         facts_no_rep = []
-        facts = generated_exp.split("$$")
-        for fact in facts:
-            fact = fact.strip()
-            if fact != "" and not fact.isspace():
+        facts = [fact for fact in generated_exp.split(MAIN_FACTS_SEP) if not fact.isspace() and fact != ""]
+
+        if bow_rep:
+            facts_bows_no_rep = []
+            facts_bows = [get_bow_of_fact(fact) for fact in facts]
+            for i in range(len(facts_bows)):
+                if facts_bows[i] not in facts_bows_no_rep:
+                    facts_bows_no_rep.append(facts_bows[i])
+                    facts_no_rep.append(facts[i])
+                else:
+                    no_repeated_facts += 1
+                no_generated_facts += 1
+        else:
+            for fact in facts:
+                fact = fact.strip()
                 if fact not in facts_no_rep:
                     facts_no_rep.append(fact)
                 else:
                     no_repeated_facts += 1
                 no_generated_facts += 1
-        generated_no_exact_rep.append(".".join(facts_no_rep))
+
+        generated_no_exact_rep.append(new_sep.join(facts_no_rep))
     return generated_no_exact_rep, no_repeated_facts / no_generated_facts
 
 
-def preprocess_predictions_df(df):
+# how to call it
+# evaluate_bleu(reference_text, generated_text_with_no_exact_repetitions)
+def evaluate_bleu(references, generated):
+    references = [[regexp_tokenizer.tokenize(reference.lower())] for reference in references]
+    generated = [regexp_tokenizer.tokenize(generated_sample.lower()) for generated_sample in generated]
+    bleu_scores = []
+    weights = [(0.5, 0.5), (0.333, 0.333, 0.334), (0.25, 0.25, 0.25, 0.25), (0.2, 0.2, 0.2, 0.2, 0.2)]
+    for weight in weights:
+        # todo: using corpus bleu not same results as bleurt
+        # score = bleu_score.corpus_bleu(list_of_references=references, hypotheses=generated,
+        #                                smoothing_function=bleu_score.SmoothingFunction().method7,
+        #                                weights=weight)
+
+        score = np.mean(
+            [bleu_score.sentence_bleu(ref, gen, weight, bleu_score.SmoothingFunction().method7) for ref, gen in
+             zip(references, generated)])
+
+        bleu_scores.append(score)
+    print(bleu_scores)
+
+
+# we use rouge_score rather than the more famous rouge library because it lets us calculate rouge-L at summary level which
+# is more relevant here than sentence level rouge-L
+def evaluate_rouge(references, generated):
+    regexp_tokenizer = RegexpTokenizer(r'\w+')
+
+    new_references = []
+    for ref in references:
+        sub_refs = [" ".join(regexp_tokenizer.tokenize(sub_ref)) for sub_ref in ref.split(".")]
+        new_references.append(os.linesep.join(sub_refs))
+
+    new_generated = []
+    for gen in generated:
+        sub_gens = [" ".join(regexp_tokenizer.tokenize(sub_gen)) for sub_gen in gen.split(".")]
+        new_generated.append(os.linesep.join(sub_gens))
+
+    metrics = ['rouge2', 'rouge3', 'rouge4', 'rouge5', 'rougeL', 'rougeLsum']
+    scores = dict(zip(metrics, [{'p': [], 'r': [], 'f': []} for _ in range(len(metrics))]))
+
+    # the tokenizer of the scorer keeps newlines for rougeLsum but removes them for the other metrics - which os what we want
+    scorer = rouge_scorer.RougeScorer(metrics)
+    for ref, gen in zip(new_references, new_generated):
+        score = scorer.score(target=ref, prediction=gen)
+        for metric in metrics:
+            scores[metric]['p'].append(score[metric].precision)
+            scores[metric]['r'].append(score[metric].recall)
+            scores[metric]['f'].append(score[metric].fmeasure)
+
+    # average
+    for metric in metrics:
+        scores[metric]['p'] = np.mean(scores[metric]['p'])
+        scores[metric]['r'] = np.mean(scores[metric]['r'])
+        scores[metric]['f'] = np.mean(scores[metric]['f'])
+
+    print(scores)
+    return scores
+
+
+def get_macro_precision_recall_f1(generated_with_separator, references_with_seperator, alpha=0.5):
+    no_generated = 0
+    no_references = 0
+    no_overlap = 0
+
+    for i in range(len(references_with_seperator)):
+        reference_facts = references_with_seperator[i].split(MAIN_FACTS_SEP)
+        reference_facts_bows = []
+        for ref_fact in reference_facts:
+            if not ref_fact.isspace() and ref_fact != "":
+                reference_facts_bows.append(get_bow_of_fact(ref_fact))
+
+        no_references += len(reference_facts_bows)
+
+        generated_facts = generated_with_separator[i].split(MAIN_FACTS_SEP)
+        generated_facts_bows = []
+        for gen_fact in generated_facts:
+            if not gen_fact.isspace() and gen_fact != "":
+                generated_facts_bows.append(get_bow_of_fact(gen_fact))
+
+        # calculate number of repeated generated facts
+        unique_gen_facts_bows = []
+        for gen_fact_bow in generated_facts_bows:
+            if gen_fact_bow not in unique_gen_facts_bows:
+                unique_gen_facts_bows.append(gen_fact_bow)
+
+        no_generated += len(unique_gen_facts_bows)
+        for gen_fact_bow in unique_gen_facts_bows:
+            if gen_fact_bow in reference_facts_bows:
+                no_overlap += 1
+
+    precision = no_overlap / no_generated
+    recall = no_overlap / no_references
+    f1 = 1 / ((alpha / precision) + ((1 - alpha) / recall))
+
+    return precision, recall, f1
+
+
+def get_micro_precision_recall_f1(generated_with_separator, references_with_seperator, alpha=0.5):
+    no_generated_for_q = []
+    no_references_for_q = []
+    no_ovrerlaps_for_q = []
+    for i in range(len(references_with_seperator)):
+        no_overlap = 0
+        reference_facts = references_with_seperator[i].split(MAIN_FACTS_SEP)
+        reference_facts_bows = []
+        for ref_fact in reference_facts:
+            if not ref_fact.isspace() and ref_fact != "":
+                reference_facts_bows.append(get_bow_of_fact(ref_fact))
+
+        no_references_for_q.append(len(reference_facts_bows))
+
+        generated_facts = generated_with_separator[i].split(MAIN_FACTS_SEP)
+        generated_facts_bows = []
+        for gen_fact in generated_facts:
+            if not gen_fact.isspace() and gen_fact != "":
+                generated_facts_bows.append(get_bow_of_fact(gen_fact))
+
+        # calculate number of repeated generated facts
+        unique_gen_facts_bows = []
+        for gen_fact_bow in generated_facts_bows:
+            if gen_fact_bow not in unique_gen_facts_bows:
+                unique_gen_facts_bows.append(gen_fact_bow)
+
+        no_generated_for_q.append(len(unique_gen_facts_bows))
+        for gen_fact_bow in unique_gen_facts_bows:
+            if gen_fact_bow in reference_facts_bows:
+                no_overlap += 1
+        no_ovrerlaps_for_q.append(no_overlap)
+
+    precisions = np.array(no_ovrerlaps_for_q) / np.array(no_generated_for_q)
+    recalls = np.array(no_ovrerlaps_for_q) / np.array(no_references_for_q)
+
+    f1s = []
+    for p, r in zip(precisions, recalls):
+        if p != 0 and r != 0:
+            f1 = 1 / ((alpha / p) + ((1 - alpha) / r))
+        else:
+            f1 = 0
+        f1s.append(f1)
+
+    print(no_references_for_q)
+    return np.mean(precisions), np.mean(recalls), np.mean(f1s)
+
+
+# def replace_all_facts_seps_with_given_sep(sents, sep):
+#     for i in range(len(sents)):
+#         sents[i] = re.sub(r"|".join(ALL_FACTS_SEPARATORS_RE), sep, sents[i])
+#     return sents
+
+
+def preprocess_predictions_df(df, exact_reps=True):
     generated_text = []
     generated_text_with_no_exact_repetitions = []
     reference_text = []
@@ -736,8 +900,8 @@ def preprocess_predictions_df(df):
         no_explanations_reference.append(x.count("$$") + x.count("%%") + x.count("&&") + x.count("||") + 1)
         reference_text.append(x.replace("$$", ".").replace("%%", ".").replace("&&", ".").replace("||", "."))
 
-    generated_text_with_no_exact_repetitions, no_repeated_to_no_generated_ratio = get_generated_no_exact_repeated_facts(
-        generated_text_with_separator)
+        generated_text_with_no_exact_repetitions, no_repeated_to_no_generated_ratio = get_generated_no_repeated_facts(
+            generated_text_with_separator, bow_rep=True)
 
     return (questions_and_answers, questions_and_answers_with_separator,
             reference_text, reference_text_with_separator,
@@ -746,10 +910,9 @@ def preprocess_predictions_df(df):
             no_explanations_reference, no_explanations_generated)
 
 
-if __name__ == "__main__":
-
-
-    df_predictions = pd.read_csv(DEV_PREDICTIONS_CSV_PATH, delimiter=",")
+def pprint_questions_generated_actual_for_annotation(test_run_csv_path, indicies):
+    df_predictions = pd.read_csv(test_run_csv_path, delimiter=",")
+    scores = df_predictions[BLEURT_SCORES]
 
     (questions_and_answers, questions_and_answers_with_separator,
      reference_text, reference_text_with_separator,
@@ -757,14 +920,155 @@ if __name__ == "__main__":
      generated_text_with_no_exact_repetitions, no_repeated_to_no_generated_ratio,
      no_explanations_reference, no_explanations_generated) = preprocess_predictions_df(df_predictions)
 
+    for i in range(len(questions_and_answers)):
+        if i in indicies:
+            print("Question {0} - ({1}): {2}".format(i, scores[i], questions_and_answers[i]))
+            actuals = reference_text[i].split(".")
+            print("\tActuals:")
+            for j in range(len(actuals)):
+                print("\t\t{0}. {1}".format(j, actuals[j]))
+
+            generated = generated_text_with_no_exact_repetitions[i].split(".")
+            print("\tGenerated:")
+            for k in range(len(generated)):
+                print("\t\t{0}. {1}".format(k, generated[k]))
+
+
+def choose_100_consistent_indicies(scores_plain, scores_ret, scores_chain, scores_chain_ret):
+    # outcome of this random search
+
+    # total
+    # error = 0.0016056331526487916
+    # error_plain: 5.041053052992628e-05, plain
+    # score = -0.24588776268996299
+    # error_ret: 0.0008634016709402337, ret
+    # score = -0.22247004230506717
+    # error_chain: 5.041053052992628e-05, chain
+    # score = -0.1732998847588897
+    # error_chain_ret: 5.041053052992628e-05, plain
+    # chain - ret = -0.12401570332236588
+    # [185,  81,  65,  76,  41,  23, 128, 162, 120,  60, 193, 132,  18,  42,  90, 103,   1, 194,
+    #  188,  32,   6,  25,  38, 174, 113,   7,  30,  68,  57,  44,   5, 158, 190, 152,  48,   8,
+    #  175, 164, 134, 155,  54,  47,  58, 116,  86, 170, 148,  92, 150,  12, 168,  89,  51, 192,
+    #  80,   0, 136, 187, 130,  50,  36, 156, 180, 172,  61, 195,   9, 105,  17, 197,  62, 125,
+    #  151, 141, 157,  71, 111, 145, 109, 142,  73,  96, 199, 177, 123,  78, 126,  52, 146,  19,
+    #  176, 169,  98, 171, 191, 149,  31,  53,  75,  91]
+
+    # we want the 100 indicies we choose to be as close to actual scores as possible
+    # the 100 indicies have to be the same for all the models
+    scores_plain = np.array(scores_plain)
+    scores_ret = np.array(scores_ret)
+    scores_chain = np.array(scores_chain)
+    scores_chain_ret = np.array(scores_chain_ret)
+
+    mean_scores_plain = np.mean(scores_plain)
+    mean_scores_ret = np.mean(scores_ret)
+    mean_scores_chain = np.mean(scores_chain)
+    mean_scores_chain_ret = np.mean(scores_chain_ret)
+
+    indicies_all = list(range(len(scores_plain)))
+
+    original_order = [0, 1, 2, 3]
+
+    best_error = 1
+    best_indicies = []
+    while True:
+        random.shuffle(indicies_all)
+        indicies = np.array(indicies_all[:100])
+
+        scores_plain_with_indicies = scores_plain[indicies]
+        mean_scores_plain_with_indicies = np.mean(scores_plain_with_indicies)
+        error_plain = abs(mean_scores_plain - mean_scores_plain_with_indicies)
+
+        scores_ret_with_indicies = scores_ret[indicies]
+        mean_scores_ret_with_indicies = np.mean(scores_ret_with_indicies)
+        error_ret = abs(mean_scores_ret - mean_scores_ret_with_indicies)
+
+        scores_chain_with_indicies = scores_chain[indicies]
+        mean_scores_chain_with_indicies = np.mean(scores_chain_with_indicies)
+        error_chain = abs(mean_scores_chain - mean_scores_chain_with_indicies)
+
+        scores_chain_ret_with_indicies = scores_chain_ret[indicies]
+        mean_scores_chain_ret_with_indicies = np.mean(scores_chain_ret_with_indicies)
+        error_chain_ret = abs(mean_scores_chain_ret - mean_scores_chain_ret_with_indicies)
+
+        mean_scores_all_with_indicies = [mean_scores_plain_with_indicies, mean_scores_ret_with_indicies,
+                                         mean_scores_chain_with_indicies, mean_scores_chain_ret_with_indicies]
+        new_order = list(np.argsort(mean_scores_all_with_indicies))
+
+        error = error_plain + error_ret + error_chain + error_chain_ret
+
+        if error < best_error and original_order == new_order:
+            best_error = error
+            best_indicies = indicies
+
+            print(f"total error = {error}")
+            print(f"error_plain: {error_plain}, plain score = {mean_scores_plain_with_indicies}")
+            print(f"error_ret: {error_ret}, ret score = {mean_scores_ret_with_indicies}")
+            print(f"error_chain: {error_plain}, chain score = {mean_scores_chain_with_indicies}")
+            print(f"error_chain_ret: {error_plain}, plain chain-ret = {mean_scores_chain_ret_with_indicies}")
+            print(best_indicies)
+            print("*" * 50)
+
+
+if __name__ == "__main__":
+
+    # indicies = [185,  81,  65,  76,  41,  23, 128, 162, 120,  60, 193, 132,  18,  42,  90, 103,  1, 194,
+    #  188,  32,   6,  25,  38, 174, 113,   7,  30,  68,  57,  44,   5, 158, 190, 152,  48,   8,
+    #  175, 164, 134, 155,  54,  47,  58, 116,  86, 170, 148,  92, 150,  12, 168,  89,  51, 192,
+    #  80,   0, 136, 187, 130,  50,  36, 156, 180, 172,  61, 195,   9, 105,  17, 197,  62, 125,
+    #  151, 141, 157,  71, 111, 145, 109, 142,  73,  96, 199, 177, 123,  78, 126,  52, 146,  19,
+    #  176, 169,  98, 171, 191, 149,  31,  53,  75,  91]
+    #
+    # pprint_questions_generated_actual_for_annotation("evaluation/BART-chain-retrieve/test_predictions_vs_actuals_no_rep_with_bleurt_scores.csv", indicies)
+    #
+    # sys.exit()
+    #
+    # choose_100_consistent_indicies(
+    #     scores_plain=pd.read_csv("evaluation/BART-plain/test_predictions_vs_actuals_no_rep_with_bleurt_scores.csv", delimiter=",")[BLEURT_SCORES],
+    #     scores_ret=pd.read_csv("evaluation/BART-retrieve-prompt-20hyp-6facts/test_predictions_vs_actuals_no_rep_with_bleurt_scores.csv", delimiter=",")[BLEURT_SCORES],
+    #     scores_chain=pd.read_csv("evaluation/BART-chains/test_predictions_vs_actuals_no_rep_with_bleurt_scores.csv", delimiter=",")[BLEURT_SCORES],
+    #     scores_chain_ret=pd.read_csv("evaluation/BART-chain-retrieve/test_predictions_vs_actuals_no_rep_with_bleurt_scores.csv", delimiter=",")[BLEURT_SCORES]
+    # )
+    #
+    # sys.exit()
+
+    df_predictions = pd.read_csv(
+        "evaluation/BART-chain-retrieve/test_predictions_vs_actuals_no_rep_with_bleurt_scores.csv", delimiter=",")
+
+    (questions_and_answers, questions_and_answers_with_separator,
+     reference_text, reference_text_with_separator,
+     generated_text, generated_text_with_separator,
+     generated_text_with_no_exact_repetitions, no_repeated_to_no_generated_ratio,
+     no_explanations_reference, no_explanations_generated) = preprocess_predictions_df(df_predictions)
+
+    evaluate_bleu(reference_text, generated_text_with_no_exact_repetitions)
+
+    sys.exit()
+    print(np.mean(df_predictions[BLEURT_SCORES]))
+
+    sys.exit()
+    no_hops_in_reference_vs_score(no_hops_reference=no_explanations_reference,
+                                  scores=df_predictions["probs_for_right_answers"])
+    show_plots()
+    sys.exit()
+
+    print(get_micro_precision_recall_f1(generated_text_with_separator, reference_text_with_separator))
+
+    # evaluate_bleu(reference_text, generated_text_with_no_exact_repetitions)
+
+    # evaluate_rouge(reference_text, generated_text_with_no_exact_repetitions)
+
+    sys.exit()
+
     try:
         bleurt_scores = df_predictions[BLEURT_SCORES]
     except KeyError:
-        bleurt_scores, bleurt_mean_score, bleurt_best_df, bleurt_worst_df = evaluate(metric_key="bleurt",
-                                                                                     generated=generated_text_with_no_exact_repetitions,
-                                                                                     references=reference_text,
-                                                                                     questions=df_predictions[
-                                                                                         "Questions"])
+        bleurt_scores, bleurt_mean_score, bleurt_best_df, bleurt_worst_df = evaluate_bleurt(metric_key="bleurt",
+                                                                                            generated=generated_text_with_no_exact_repetitions,
+                                                                                            references=reference_text,
+                                                                                            questions=df_predictions[
+                                                                                                "Questions"])
         # save new csv with scores
         df_predictions["bleurt_scores"] = bleurt_scores
         df_predictions.to_csv(DEV_PREDICTIONS_CSV_PATH.replace(".csv", "_no_rep_with_bleurt_scores.csv"))
@@ -811,8 +1115,8 @@ if __name__ == "__main__":
 
     # todo change
     questions_and_answers_with_separator = \
-    pd.read_csv("evaluation/BART-retrieve-prompt/test_predictions_vs_actuals_no_rep_with_bleurt_scores.csv")[
-        "Questions"]
+        pd.read_csv("evaluation/BART-retrieve-prompt/test_predictions_vs_actuals_no_rep_with_bleurt_scores.csv")[
+            "Questions"]
     no_generated_explanations_vs_no_explanations_copied_from_input(
         questions_and_answers_with_seperator=questions_and_answers_with_separator,
         generated_explanations_with_separator=generated_text_with_separator)

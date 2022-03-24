@@ -5,7 +5,8 @@ from wtv2_constants import *
 from generation_params import *
 
 
-def generate(epoch, tokenizer, model, device, loader, chosen_model_params, no_samples=None, gen_params=None, verbose=True):
+def generate(epoch, tokenizer, model, device, loader, chosen_model_params, no_samples=None, gen_params=None,
+             verbose=True):
     if gen_params is None:
         gen_params = default_gen_params
 
@@ -24,14 +25,29 @@ def generate(epoch, tokenizer, model, device, loader, chosen_model_params, no_sa
             # At inference time, it is recommended to use generate(). This method takes care of encoding
             # the input and feeding the encoded hidden states via cross-attention layers to the decoder and
             # auto-regressively generates the decoder output
+
+            # generated_ids = model.generate(
+            #     input_ids=source_ids,
+            #     attention_mask=source_mask,
+            #     max_length=chosen_model_params[MAX_TARGET_TEXT_LENGTH],
+            #     num_beams=gen_params[BEAM_SIZE],
+            #     repetition_penalty=gen_params[REPETITION_PENALTY],
+            #     length_penalty=gen_params[LENGTH_PENALTY],
+            #     early_stopping=gen_params[EARLY_STOPPING],
+            #     top_p=gen_params[P],
+            #     top_k=gen_params[K],
+            #     temperature=gen_params[TEMPERATURE],
+            #     do_sample=gen_params[SAMPLE]
+            # )
+
             generated_ids = model.generate(
                 input_ids=source_ids,
                 attention_mask=source_mask,
                 max_length=chosen_model_params[MAX_TARGET_TEXT_LENGTH],
-                num_beams=gen_params[BEAM_SIZE],
-                repetition_penalty=gen_params[REPETITION_PENALTY],
-                length_penalty=gen_params[LENGTH_PENALTY],
-                early_stopping=gen_params[EARLY_STOPPING]
+                num_beams=2,
+                repetition_penalty=2.5,
+                length_penalty=1.0,
+                early_stopping=True
             )
 
             predicted_explanations = [
@@ -128,7 +144,8 @@ def generate_with_inference_chains(epoch, tokenizer, model, device, loader, mode
 
 
 # loader here has to contain a normal / not chained dataset
-def generate_with_chains(epoch, tokenizer, model, device, loader, model_params, no_samples=None, gen_params=None, verbose=True):
+def generate_with_chains(epoch, tokenizer, model, device, loader, model_params, no_samples=None, gen_params=None,
+                         verbose=True):
     if gen_params is None:
         gen_params = default_gen_params
 
@@ -203,11 +220,25 @@ def generate_with_chains(epoch, tokenizer, model, device, loader, model_params, 
                     input_ids=role_source_ids,
                     attention_mask=role_source_mask,
                     max_length=model_params[MAX_TARGET_TEXT_LENGTH],
-                    num_beams=gen_params[BEAM_SIZE],
-                    repetition_penalty=gen_params[REPETITION_PENALTY],
-                    length_penalty=gen_params[LENGTH_PENALTY],
-                    early_stopping=gen_params[EARLY_STOPPING]
+                    num_beams=2,
+                    repetition_penalty=2.5,
+                    length_penalty=1.0,
+                    early_stopping=True
                 )
+                # todo change
+                # role_generated_ids = model.generate(
+                #     input_ids=role_source_ids,
+                #     attention_mask=role_source_mask,
+                #     max_length=model_params[MAX_TARGET_TEXT_LENGTH],
+                #     num_beams=gen_params[BEAM_SIZE],
+                #     repetition_penalty=gen_params[REPETITION_PENALTY],
+                #     length_penalty=gen_params[LENGTH_PENALTY],
+                #     early_stopping=gen_params[EARLY_STOPPING],
+                #     top_p=gen_params[P],
+                #     top_k=gen_params[K],
+                #     temperature=gen_params[TEMPERATURE],
+                #     do_sample=gen_params[SAMPLE]
+                # )
                 role_generated = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True)
                                   for id in role_generated_ids]
 
@@ -219,6 +250,19 @@ def generate_with_chains(epoch, tokenizer, model, device, loader, model_params, 
                     " || ".join([central_generated[i], grounding_generated[i], lexglue_generated[i]])
                 )
             predictions.extend(predicted_explanations)
+
+            # if _ + 1 % 10 == 0:
+            #     for i in range(len(questions)):
+            #         print(f"question: {questions[i]}")
+            #         if all_retrieved_central_facts:
+            #             print(f"retrieved_central: {all_retrieved_central_facts[i]}")
+            #         if all_retrieved_grounding_facts:
+            #             print(f"retrieved_grounding: {all_retrieved_grounding_facts[i]}")
+            #         if all_retrieved_lexglue_facts:
+            #             print(f"retrieved_lexglue: {all_retrieved_lexglue_facts[i]}")
+            #         print(f"actual: {actuals[i]}")
+            #         print(f"predicted = {predictions[i]}")
+            #         print("**" * 20)
 
             if no_samples is not None and no_samples >= _:
                 break
