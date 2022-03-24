@@ -2,7 +2,6 @@ import torch
 from torch.utils.data import Dataset, DataLoader, RandomSampler, SequentialSampler
 import pandas as pd
 pd.options.mode.chained_assignment = None
-from transformers import T5Tokenizer
 
 CENTRAL_RETRIEVED = "CENTRAL_RETRIEVED"
 GROUNDING_RETRIEVED = "GROUNDING_RETRIEVED"
