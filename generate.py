@@ -57,13 +57,13 @@ def generate(epoch, tokenizer, model, device, loader, chosen_model_params, no_sa
                                    id in target_ids]
             inputs = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True) for id in
                       source_ids]
-            if _ % 10 == 0 and verbose:
-                for i in range(len(inputs)):
-                    print("-------------------------------------------------")
-                    print("SHOWING EXAMPLE:")
-                    print("input:", inputs[i])
-                    print("predicted_explanations:", predicted_explanations[i])
-                    print("actual_explanations:", actual_explanations[i])
+            # if _ % 10 == 0: #and verbose:
+            #     for i in range(len(inputs)):
+            #         print("-------------------------------------------------")
+            #         print("SHOWING EXAMPLE:")
+            #         print("input:", inputs[i])
+            #         print("predicted_explanations:", predicted_explanations[i])
+            #         print("actual_explanations:", actual_explanations[i])
 
             predictions.extend(predicted_explanations)
             actuals.extend(actual_explanations)

@@ -63,7 +63,6 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
 
             val_loss = val_step(training_epoch, tokenizer, model, device, validation_loader)
             tb.add_scalar("val_loss", val_loss, training_epoch)
-            print(f"validation_loss = {val_loss}")
 
             if chosen_model_params[CHAIN]:
                 if chosen_model_params[CHAIN_ON] == ROLE:
@@ -238,18 +237,23 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
 
             print("best_bleurt_score = ", best_val_score)
 
-            final_df.to_csv("predictions_{0}.csv", training_epoch)
+            final_df.to_csv("predictions_{0}.csv".format(str(training_epoch)))
 
             if val_loss < best_val_loss:
+                best_val_loss = val_loss
                 # save predictions
                 final_df.to_csv(os.path.join(output_dir, "best_predictions.csv"))
-                print("SAVED BEST PREDICTIONS (based on val loss) AT " + os.path.join(output_dir, "predictions.csv") + "\n")
+                print("SAVED BEST PREDICTIONS (based on val loss) AT " + os.path.join(output_dir,
+                                                                                      "predictions.csv") + "\n")
                 # save model and tokenizer
                 model_checkpoint_path = os.path.join(output_dir, "checkpoints")
                 model.save_pretrained(model_checkpoint_path)
                 tokenizer.save_pretrained(model_checkpoint_path)
                 print("SAVED MODEL AT " + model_checkpoint_path + "\n")
 
+
+            print(f"validation_loss = {val_loss}")
+            print(f"best_validation_loss = {best_val_loss}")
             print("**" * 20)
 
 
@@ -328,17 +332,31 @@ def metric_agnostic_trainer(model, tokenizer, optimizer, training_loader, valida
         print("**" * 20)
 
 
+# This function is copied from modeling_bart.py
+def shift_tokens_right(input_ids, pad_token_id):
+    """Shift input ids one token to the right, and wrap the last non pad token (usually <eos>)."""
+    prev_output_tokens = input_ids.clone()
+    index_of_eos = (input_ids.ne(pad_token_id).sum(dim=1) - 1).unsqueeze(-1)
+    prev_output_tokens[:, 0] = input_ids.gather(1, index_of_eos).squeeze()
+    prev_output_tokens[:, 1:] = input_ids[:, :-1]
+    return prev_output_tokens
+
+
 def train_step(epoch, tokenizer, model, device, loader, optimizer, logger):
     model.train()
 
     training_losses = []
     for _, data in enumerate(loader, start=0):
         y = data["target_ids"].to(device, dtype=torch.long)
-        y_ids = y[:, :-1].contiguous()
-        lm_labels = y[:, 1:].clone().detach()
+        #y_ids = y[:, :-1].contiguous()
+        y_ids = shift_tokens_right(y, tokenizer.pad_token_id)
+
+        #lm_labels = y[:, 1:].clone().detach()
+
+        lm_labels = y[:, :].clone().detach()
         # In addition, we must make sure that padding token id’s of the labels are not taken into account by the loss function.
         # In PyTorch and Tensorflow, this can be done by replacing them with -100, which is the ignore_index of the CrossEntropyLoss
-        lm_labels[y[:, 1:] == tokenizer.pad_token_id] = -100
+        lm_labels[y[:, :] == tokenizer.pad_token_id] = -100
         ids = data["source_ids"].to(device, dtype=torch.long)
         mask = data["source_mask"].to(device, dtype=torch.long)
 
