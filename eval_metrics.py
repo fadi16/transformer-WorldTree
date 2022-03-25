@@ -114,6 +114,19 @@ def evaluate_relevance_and_completeness(question_ids, postprocessed_generated_ex
 if __name__ == "__main__":
     from postprocess import postprocess_explanation, regexp_tokenize
 
+    df = pd.read_csv("./content/transformer-WorldTree/test_predictions_vs_actuals_no_rep_with_bleurt_scores.csv")
+    actuals = df["Actual Text"]
+    predictions = df["Generated Text"]
+
+    postprocessed_actuals = [postprocess_explanation(actual_exp) for actual_exp in actuals]
+    postprocessed_generated = [postprocess_explanation(gen_exp) for gen_exp in predictions]
+
+    scores = bleurt_metric(postprocessed_actuals, postprocessed_generated)
+
+    print(np.mean(scores))
+
+    sys.exit()
+
     question_ids = pd.read_csv("./data/v2-proper-data/dev_data_wed.csv", sep="\t")["question_id"]
 
     df = pd.read_csv("./evaluation/bart-plain-metric-agnostic/bs_4_no_penalty.csv")

@@ -22,33 +22,20 @@ def generate(epoch, tokenizer, model, device, loader, chosen_model_params, no_sa
             source_mask = data["source_mask"].to(device, dtype=torch.long)
             target_ids = data["target_ids"].to(device, dtype=torch.long)
 
-            # At inference time, it is recommended to use generate(). This method takes care of encoding
-            # the input and feeding the encoded hidden states via cross-attention layers to the decoder and
-            # auto-regressively generates the decoder output
-
-            # generated_ids = model.generate(
-            #     input_ids=source_ids,
-            #     attention_mask=source_mask,
-            #     max_length=chosen_model_params[MAX_TARGET_TEXT_LENGTH],
-            #     num_beams=gen_params[BEAM_SIZE],
-            #     repetition_penalty=gen_params[REPETITION_PENALTY],
-            #     length_penalty=gen_params[LENGTH_PENALTY],
-            #     early_stopping=gen_params[EARLY_STOPPING],
-            #     top_p=gen_params[P],
-            #     top_k=gen_params[K],
-            #     temperature=gen_params[TEMPERATURE],
-            #     do_sample=gen_params[SAMPLE]
-            # )
-
             generated_ids = model.generate(
                 input_ids=source_ids,
                 attention_mask=source_mask,
                 max_length=chosen_model_params[MAX_TARGET_TEXT_LENGTH],
-                num_beams=2,
-                repetition_penalty=2.5,
-                length_penalty=1.0,
-                early_stopping=True
+                num_beams=gen_params[BEAM_SIZE],
+                repetition_penalty=gen_params[REPETITION_PENALTY],
+                length_penalty=gen_params[LENGTH_PENALTY],
+                early_stopping=gen_params[EARLY_STOPPING],
+                top_p=gen_params[P],
+                top_k=gen_params[K],
+                temperature=gen_params[TEMPERATURE],
+                do_sample=gen_params[SAMPLE]
             )
+
 
             predicted_explanations = [
                 tokenizer.decode(generated_id, skip_special_tokens=True, cleanup_tokenization_spaces=True) for
@@ -57,20 +44,14 @@ def generate(epoch, tokenizer, model, device, loader, chosen_model_params, no_sa
                                    id in target_ids]
             inputs = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True) for id in
                       source_ids]
-            # if _ % 10 == 0: #and verbose:
-            #     for i in range(len(inputs)):
-            #         print("-------------------------------------------------")
-            #         print("SHOWING EXAMPLE:")
-            #         print("input:", inputs[i])
-            #         print("predicted_explanations:", predicted_explanations[i])
-            #         print("actual_explanations:", actual_explanations[i])
+
 
             predictions.extend(predicted_explanations)
             actuals.extend(actual_explanations)
             questions.extend(inputs)
 
-            if no_samples is not None and no_samples >= _:
-                break
+            # if no_samples is not None and no_samples >= _:
+            #     break
 
     return questions, predictions, actuals
 
@@ -216,29 +197,28 @@ def generate_with_chains(epoch, tokenizer, model, device, loader, model_params, 
                 role_source_ids = role_source_ids.to(device, dtype=torch.long)
                 role_source_mask = role_source_mask.to(device, dtype=torch.long)
 
-                role_generated_ids = model.generate(
-                    input_ids=role_source_ids,
-                    attention_mask=role_source_mask,
-                    max_length=model_params[MAX_TARGET_TEXT_LENGTH],
-                    num_beams=2,
-                    repetition_penalty=2.5,
-                    length_penalty=1.0,
-                    early_stopping=True
-                )
-                # todo change
                 # role_generated_ids = model.generate(
                 #     input_ids=role_source_ids,
                 #     attention_mask=role_source_mask,
                 #     max_length=model_params[MAX_TARGET_TEXT_LENGTH],
-                #     num_beams=gen_params[BEAM_SIZE],
-                #     repetition_penalty=gen_params[REPETITION_PENALTY],
-                #     length_penalty=gen_params[LENGTH_PENALTY],
-                #     early_stopping=gen_params[EARLY_STOPPING],
-                #     top_p=gen_params[P],
-                #     top_k=gen_params[K],
-                #     temperature=gen_params[TEMPERATURE],
-                #     do_sample=gen_params[SAMPLE]
+                #     num_beams=2,
+                #     repetition_penalty=2.5,
+                #     length_penalty=1.0,
+                #     early_stopping=True
                 # )
+                role_generated_ids = model.generate(
+                    input_ids=role_source_ids,
+                    attention_mask=role_source_mask,
+                    max_length=model_params[MAX_TARGET_TEXT_LENGTH],
+                    num_beams=gen_params[BEAM_SIZE],
+                    repetition_penalty=gen_params[REPETITION_PENALTY],
+                    length_penalty=gen_params[LENGTH_PENALTY],
+                    early_stopping=gen_params[EARLY_STOPPING],
+                    top_p=gen_params[P],
+                    top_k=gen_params[K],
+                    temperature=gen_params[TEMPERATURE],
+                    do_sample=gen_params[SAMPLE]
+                )
                 role_generated = [tokenizer.decode(id, skip_special_tokens=True, cleanup_tokenization_spaces=True)
                                   for id in role_generated_ids]
 
@@ -264,8 +244,8 @@ def generate_with_chains(epoch, tokenizer, model, device, loader, model_params, 
             #         print(f"predicted = {predictions[i]}")
             #         print("**" * 20)
 
-            if no_samples is not None and no_samples >= _:
-                break
+            # if no_samples is not None and no_samples >= _:
+            #     break
 
     return questions, all_retrieved_central_facts, all_retrieved_grounding_facts, all_retrieved_lexglue_facts, predictions, actuals
 

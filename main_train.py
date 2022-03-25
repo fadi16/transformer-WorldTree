@@ -19,7 +19,7 @@ path_dev_chains = None
 if __name__ == "__main__":
 
     ####################### CHANGE AS APPROPRRIATE #######################
-    chosen_model_params = bart_retrieve_model_params
+    chosen_model_params = bart_plain_model_params
     for k, v in chosen_model_params.items():
         print(k, ":\t", v)
     ######################################################################

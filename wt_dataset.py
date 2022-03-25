@@ -1,6 +1,8 @@
 import torch
 from torch.utils.data import Dataset, DataLoader, RandomSampler, SequentialSampler
 import pandas as pd
+from transformers import BartTokenizer
+
 pd.options.mode.chained_assignment = None
 
 CENTRAL_RETRIEVED = "CENTRAL_RETRIEVED"
@@ -91,39 +93,27 @@ class WorldTreeDataset(Dataset):
         }
 
 
-# if __name__ == "__main__":
-#     dev_data_path = "data/v2-proper-data/train_data_wed_with_retrieved_exps.csv"
-#     df_dev = pd.read_csv(dev_data_path, delimiter="\t")
-#     #print(df_dev.keys())
-#
-#     #print(df_dev.columns.tolist())
-#     #print(df_dev["question_and_answer"])
-#     #display_df(df_dev[["Questions", "Explanations"]].head(1))
-#     #print(df_dev.head(1)["Explanations"])
-#
-#     tokenizer = T5Tokenizer.from_pretrained("t5-base")
-#     # todo: continue here/.
-#     testing_set = WorldTreeDataset(
-#         dataframe=df_dev,
-#         tokenizer=tokenizer,
-#         source_text_column_name="hypothesis",
-#         target_text_column_name="explanation",
-#         source_len=256,
-#         target_len=256,
-#         source_augmented_text_column_name="retrieved_facts"
-#     )
-#     print(len(testing_set))
-#     print(df_dev.shape)
-#
-#     for i in range(len(testing_set)):
-#         testing_set[i]["ret"] = "string"
-#
-#     validation_loader = DataLoader(
-#         dataset=testing_set,
-#         batch_size=4,
-#         shuffle=False,
-#         num_workers=0
-#     )
-#
-#     for d in validation_loader:
-#         print(d)
+if __name__ == "__main__":
+    dev_data_path = "data/v2-proper-data/dev_data_wed.csv"
+    df_dev = pd.read_csv(dev_data_path, delimiter="\t")
+    #print(df_dev.keys())
+
+    #print(df_dev.columns.tolist())
+    #print(df_dev["question_and_answer"])
+    #display_df(df_dev[["Questions", "Explanations"]].head(1))
+    #print(df_dev.head(1)["Explanations"])
+
+    tokenizer = BartTokenizer.from_pretrained("facebook/bart-base")
+
+    testing_set = WorldTreeDataset(
+        dataframe=df_dev,
+        tokenizer=tokenizer,
+        source_text_column_name="question_and_answer",
+        target_text_column_name="explanation",
+        source_len=256,
+        target_len=256,
+    )
+    print(len(testing_set))
+    print(df_dev.shape)
+
+    print(testing_set[10])

@@ -15,12 +15,12 @@ import pickle
 # todo: change checkpoint and file paths if needed
 #############################################
 OUTPUT_FILE_PATH = "test.csv"
-MODEL_CHECKPOINT_DIR_PATH = "./evaluation/bart-chain-retrieve-metric-agnostic/checkpoints"
+MODEL_CHECKPOINT_DIR_PATH = "./outputs/checkpoints"
 target_text = "explanation"
 TRAINING_CSV_PATH = "./data/v2-proper-data/train_data_wed.csv"
-# todo
-TESTING_CSV_PATH = "./data/v2-proper-data/test_data_wed.csv"#"./data/v2-proper-data/dev_data_wed.csv"
-chosen_model_params = bart_chain_retrieve_model_params
+INFERENCE_BATCH_SIZE = 16
+TESTING_CSV_PATH = "./data/v2-proper-data/dev_data_wed.csv"
+chosen_model_params = bart_retrieve_model_params
 do_eval = True
 ##############################################
 
@@ -108,7 +108,7 @@ if __name__ == "__main__":
 
     testing_loader = DataLoader(
         dataset=testing_dataset,
-        batch_size=6,
+        batch_size=INFERENCE_BATCH_SIZE,
         shuffle=False,
         num_workers=0
     )
@@ -133,7 +133,7 @@ if __name__ == "__main__":
     scores = []
     configs = []
 
-    for num, gen_params in enumerate([default_gen_params]):
+    for num, gen_params in enumerate(grid_search_gen_params):
 
         print(f"Generation Params : config{num} out of {len(grid_search_gen_params)}")
         for k, v in gen_params.items():
@@ -208,7 +208,7 @@ if __name__ == "__main__":
             if mean_bleurt > best_bleurt_score:
                 best_bleurt_score = mean_bleurt
                 best_config = gen_params
-                print(f"best_bleurt_score = {best_bleurt_score}")
+            print(f"best_bleurt_score = {best_bleurt_score}")
 
             predictions_and_actuals_df.to_csv(f"{gen_params[NAME]}.csv")
             print("**" * 20)

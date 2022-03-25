@@ -3,7 +3,6 @@ import pandas as pd
 from rich import box
 from rich.table import Table, Column
 
-from main_eval import preprocess_predictions_df, evaluate_bleurt
 from model_params import *
 import torch
 import numpy as np
@@ -11,6 +10,8 @@ from generate import generate, generate_with_chains, generate_with_inference_cha
 from torch.utils.tensorboard import SummaryWriter
 import rich
 from generate_v2_data import CENTRAL, GROUNDING, LEXGLUE
+from postprocess import postprocess_explanation
+from eval_metrics import evaluate_bleurt
 
 
 def set_seed(model_params):
@@ -80,18 +81,19 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
                             questions[i] += " @@ " + " || ".join(
                                 [retrieved_central[i], retrieved_grounding[i], retrieved_lexglue[i]])
 
+                    # todo
+                    reference_text = [postprocess_explanation(exp) for exp in actuals]
+                    generated_text = [postprocess_explanation(exp) for exp in predictions]
+
+                    bleurt_scores = evaluate_bleurt(reference_text, generated_text)
+                    eval_score = np.mean(bleurt_scores)
+
                     final_df = pd.DataFrame({
                         "Questions": questions,
-                        "Generated Text": predictions,
-                        "Actual Text": actuals
+                        "Generated Text": generated_text,
+                        "Actual Text": reference_text,
+                        "bleurt_scores": bleurt_scores
                     })
-                    _, _, reference_text, _, _, _, generated_text_with_no_exact_repetitions, _, _, _ = preprocess_predictions_df(
-                        df=final_df)
-                    _, eval_score, _, _ = evaluate_bleurt(metric_key="bleurt",
-                                                          generated=generated_text_with_no_exact_repetitions,
-                                                          references=reference_text,
-                                                          questions=None,
-                                                          best_and_worst=False)
 
                     #######################################################
                     # bleurt scores for each explanatory role
@@ -106,26 +108,17 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
                     roles = [CENTRAL, GROUNDING, LEXGLUE] if chosen_model_params[CENTRAL_FIRST] else [GROUNDING,
                                                                                                       CENTRAL, LEXGLUE]
 
-                    df = pd.DataFrame({
-                        "Questions": questions_chains,
-                        "Generated Text": predictions_chains,
-                        "Actual Text": actuals_chains
-                    })
-                    _, _, reference_text, _, _, _, generated_text_with_no_exact_repetitions, _, _, _ = preprocess_predictions_df(
-                        df=df)
+                    reference_text = [postprocess_explanation(exp) for exp in actuals_chains]
+                    generated_text = [postprocess_explanation(exp) for exp in predictions_chains]
 
                     for role_index, role in enumerate(roles):
                         role_ref = [reference_text[i] for i in range(len(reference_text)) if i % 3 == role_index]
-                        role_gen = [generated_text_with_no_exact_repetitions[i] for i in
-                                    range(len(generated_text_with_no_exact_repetitions)) if i % 3 == role_index]
+                        role_gen = [generated_text[i] for i in range(len(generated_text)) if i % 3 == role_index]
                         role_questions = [questions_chains[i] for i in range(len(questions_chains)) if
                                           i % 3 == role_index]
 
-                        _, role_eval_score, _, _ = evaluate_bleurt(metric_key="bleurt",
-                                                                   generated=role_gen,
-                                                                   references=role_ref,
-                                                                   questions=None,
-                                                                   best_and_worst=False)
+                        role_bleurt_scores = evaluate_bleurt(role_ref, role_gen)
+                        role_eval_score = np.mean(bleurt_scores)
 
                         print("{0} bleurt score = {1}".format(role, role_eval_score))
                         tb.add_scalar("{0}_BLEURT".format(role), role_eval_score)
@@ -133,79 +126,80 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
                         role_df = pd.DataFrame({
                             "Questions": role_questions,
                             "Generated Text": role_gen,
-                            "Actual Text": role_ref
+                            "Actual Text": role_ref,
+                            "bleurt_scores": role_bleurt_scores
                         })
                         role_df.to_csv("{0}_predictions_{1}.csv".format(role, training_epoch))
 
-                elif chosen_model_params[CHAIN_ON] == PREVIOUS_SORTED:
-                    questions, predictions, actuals = generate_with_inference_chains(epoch=validation_epoch,
-                                                                                     tokenizer=tokenizer,
-                                                                                     loader=validation_loader2,
-                                                                                     model=model,
-                                                                                     device=device,
-                                                                                     model_params=chosen_model_params)
-                    final_df = pd.DataFrame({
-                        "Questions": questions,
-                        "Generated Text": predictions,
-                        "Actual Text": actuals
-                    })
-                    _, _, reference_text, _, _, _, generated_text_with_no_exact_repetitions, _, _, _ = preprocess_predictions_df(
-                        df=final_df)
-                    _, eval_score, _, _ = evaluate_bleurt(metric_key="bleurt",
-                                                          generated=generated_text_with_no_exact_repetitions,
-                                                          references=reference_text,
-                                                          questions=None,
-                                                          best_and_worst=False)
-                    print("**" * 10)
-                    print("Finished overall validation")
-                    print("**" * 10)
-
-                    #######################################
-                    # For each inference step
-                    questions_inference_steps, predictions_inference_steps, actuals_inference_steps = generate(
-                        epoch=validation_epoch,
-                        tokenizer=tokenizer,
-                        loader=validation_loader,
-                        model=model,
-                        device=device,
-                        chosen_model_params=chosen_model_params)
-
-                    df = pd.DataFrame({
-                        "Questions": questions_inference_steps,
-                        "Generated Text": predictions_inference_steps,
-                        "Actual Text": actuals_inference_steps
-                    })
-                    _, _, reference_text, _, _, _, generated_text_with_no_exact_repetitions, _, _, _ = preprocess_predictions_df(
-                        df=df)
-
-                    for inference_step in range(chosen_model_params[NO_INFERENCE_STEPS] + 1):
-                        inference_step_ref = [reference_text[i] for i in range(len(reference_text)) if
-                                              i % (chosen_model_params[NO_INFERENCE_STEPS] + 1) == inference_step]
-                        inference_step_gen = [generated_text_with_no_exact_repetitions[i] for i in
-                                              range(len(generated_text_with_no_exact_repetitions)) if
-                                              i % (chosen_model_params[NO_INFERENCE_STEPS] + 1) == inference_step]
-                        inference_step_questions = [questions_inference_steps[i] for i in
-                                                    range(len(questions_inference_steps)) if
-                                                    i % (chosen_model_params[NO_INFERENCE_STEPS] + 1) == inference_step]
-
-                        _, inference_step_eval_score, _, _ = evaluate_bleurt(metric_key="bleurt",
-                                                                             generated=inference_step_gen,
-                                                                             references=inference_step_ref,
-                                                                             questions=None,
-                                                                             best_and_worst=False)
-
-                        print("inference step {0} bleurt score = {1}".format(inference_step, inference_step_eval_score))
-                        tb.add_scalar("inference_step_{0}_BLEURT".format(inference_step), inference_step_eval_score)
-
-                        inference_step_df = pd.DataFrame({
-                            "Questions": inference_step_questions,
-                            "Generated Text": inference_step_gen,
-                            "Actual Text": inference_step_ref
-                        })
-                        inference_step_df.to_csv("inference_step_{0}_predictions.csv".format(inference_step))
-                        print("**" * 10)
-                        print("finished inference step {0} validation".format(inference_step))
-                        print("**" * 10)
+                # elif chosen_model_params[CHAIN_ON] == PREVIOUS_SORTED:
+                #     questions, predictions, actuals = generate_with_inference_chains(epoch=validation_epoch,
+                #                                                                      tokenizer=tokenizer,
+                #                                                                      loader=validation_loader2,
+                #                                                                      model=model,
+                #                                                                      device=device,
+                #                                                                      model_params=chosen_model_params)
+                #     final_df = pd.DataFrame({
+                #         "Questions": questions,
+                #         "Generated Text": predictions,
+                #         "Actual Text": actuals
+                #     })
+                #     _, _, reference_text, _, _, _, generated_text_with_no_exact_repetitions, _, _, _ = preprocess_predictions_df(
+                #         df=final_df)
+                #     _, eval_score, _, _ = evaluate_bleurt(metric_key="bleurt",
+                #                                           generated=generated_text_with_no_exact_repetitions,
+                #                                           references=reference_text,
+                #                                           questions=None,
+                #                                           best_and_worst=False)
+                #     print("**" * 10)
+                #     print("Finished overall validation")
+                #     print("**" * 10)
+                #
+                #     #######################################
+                #     # For each inference step
+                #     questions_inference_steps, predictions_inference_steps, actuals_inference_steps = generate(
+                #         epoch=validation_epoch,
+                #         tokenizer=tokenizer,
+                #         loader=validation_loader,
+                #         model=model,
+                #         device=device,
+                #         chosen_model_params=chosen_model_params)
+                #
+                #     df = pd.DataFrame({
+                #         "Questions": questions_inference_steps,
+                #         "Generated Text": predictions_inference_steps,
+                #         "Actual Text": actuals_inference_steps
+                #     })
+                #     _, _, reference_text, _, _, _, generated_text_with_no_exact_repetitions, _, _, _ = preprocess_predictions_df(
+                #         df=df)
+                #
+                #     for inference_step in range(chosen_model_params[NO_INFERENCE_STEPS] + 1):
+                #         inference_step_ref = [reference_text[i] for i in range(len(reference_text)) if
+                #                               i % (chosen_model_params[NO_INFERENCE_STEPS] + 1) == inference_step]
+                #         inference_step_gen = [generated_text_with_no_exact_repetitions[i] for i in
+                #                               range(len(generated_text_with_no_exact_repetitions)) if
+                #                               i % (chosen_model_params[NO_INFERENCE_STEPS] + 1) == inference_step]
+                #         inference_step_questions = [questions_inference_steps[i] for i in
+                #                                     range(len(questions_inference_steps)) if
+                #                                     i % (chosen_model_params[NO_INFERENCE_STEPS] + 1) == inference_step]
+                #
+                #         _, inference_step_eval_score, _, _ = evaluate_bleurt(metric_key="bleurt",
+                #                                                              generated=inference_step_gen,
+                #                                                              references=inference_step_ref,
+                #                                                              questions=None,
+                #                                                              best_and_worst=False)
+                #
+                #         print("inference step {0} bleurt score = {1}".format(inference_step, inference_step_eval_score))
+                #         tb.add_scalar("inference_step_{0}_BLEURT".format(inference_step), inference_step_eval_score)
+                #
+                #         inference_step_df = pd.DataFrame({
+                #             "Questions": inference_step_questions,
+                #             "Generated Text": inference_step_gen,
+                #             "Actual Text": inference_step_ref
+                #         })
+                #         inference_step_df.to_csv("inference_step_{0}_predictions.csv".format(inference_step))
+                #         print("**" * 10)
+                #         print("finished inference step {0} validation".format(inference_step))
+                #         print("**" * 10)
 
 
             else:
@@ -216,18 +210,18 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
                                                            device=device,
                                                            chosen_model_params=chosen_model_params)
 
+                reference_text = [postprocess_explanation(exp) for exp in actuals]
+                generated_text = [postprocess_explanation(exp) for exp in predictions]
+
+                bleurt_scores = evaluate_bleurt(reference_text, generated_text)
+                eval_score = np.mean(bleurt_scores)
+
                 final_df = pd.DataFrame({
                     "Questions": questions,
-                    "Generated Text": predictions,
-                    "Actual Text": actuals
+                    "Generated Text": generated_text,
+                    "Actual Text": reference_text,
+                    "bleurt_scores": bleurt_scores
                 })
-                _, _, reference_text, _, _, _, generated_text_with_no_exact_repetitions, _, _, _ = preprocess_predictions_df(
-                    df=final_df)
-                _, eval_score, _, _ = evaluate_bleurt(metric_key="bleurt",
-                                                      generated=generated_text_with_no_exact_repetitions,
-                                                      references=reference_text,
-                                                      questions=None,
-                                                      best_and_worst=False)
 
             print("overall bleurt score = ", eval_score)
             tb.add_scalar("overall_bleurt_score", eval_score, training_epoch)
@@ -250,7 +244,6 @@ def trainer(model, tokenizer, optimizer, training_loader, validation_loader, val
                 model.save_pretrained(model_checkpoint_path)
                 tokenizer.save_pretrained(model_checkpoint_path)
                 print("SAVED MODEL AT " + model_checkpoint_path + "\n")
-
 
             print(f"validation_loss = {val_loss}")
             print(f"best_validation_loss = {best_val_loss}")
@@ -300,7 +293,7 @@ def metric_agnostic_trainer(model, tokenizer, optimizer, training_loader, valida
                                                                                      model=model,
                                                                                      device=device,
                                                                                      model_params=chosen_model_params,
-                                                                                     no_samples=5)
+                                                                                     no_samples=None)
                     print("retrieved_central = ", retrieved_central)
                     print("retrieved_grounding = ", retrieved_grounding)
                     print("retrieved_lexglue = ", retrieved_lexglue)
@@ -311,7 +304,7 @@ def metric_agnostic_trainer(model, tokenizer, optimizer, training_loader, valida
                                                            loader=validation_loader,
                                                            model=model,
                                                            device=device,
-                                                           chosen_model_params=chosen_model_params, no_samples=5)
+                                                           chosen_model_params=chosen_model_params, no_samples=None)
             print("--" * 20)
 
             validation_loss = val_step(training_epoch, tokenizer, model, device, validation_loader)
@@ -348,14 +341,11 @@ def train_step(epoch, tokenizer, model, device, loader, optimizer, logger):
     training_losses = []
     for _, data in enumerate(loader, start=0):
         y = data["target_ids"].to(device, dtype=torch.long)
-        #y_ids = y[:, :-1].contiguous()
         y_ids = shift_tokens_right(y, tokenizer.pad_token_id)
-
-        #lm_labels = y[:, 1:].clone().detach()
-
         lm_labels = y[:, :].clone().detach()
-        # In addition, we must make sure that padding token id’s of the labels are not taken into account by the loss function.
-        # In PyTorch and Tensorflow, this can be done by replacing them with -100, which is the ignore_index of the CrossEntropyLoss
+        # In addition, we must make sure that padding token id’s of the labels are not taken into account by the loss
+        # function. In PyTorch and Tensorflow, this can be done by replacing them with -100, which is the
+        # ignore_index of the CrossEntropyLoss
         lm_labels[y[:, :] == tokenizer.pad_token_id] = -100
         ids = data["source_ids"].to(device, dtype=torch.long)
         mask = data["source_mask"].to(device, dtype=torch.long)
@@ -368,11 +358,6 @@ def train_step(epoch, tokenizer, model, device, loader, optimizer, logger):
         )
 
         loss = outputs[0]
-
-        # todo don't log
-        # if _ % 250 == 0:
-        #     logger.add_row(str(epoch), str(_), str(loss))
-        #     rich.print(logger)
 
         # clears old gradients from last step - so that they do not accumulate everytime you do loss.backwards
         optimizer.zero_grad()
@@ -393,9 +378,9 @@ def val_step(epoch, tokenizer, model, device, loader):
     with torch.no_grad():
         for _, data in enumerate(loader, start=0):
             y = data["target_ids"].to(device, dtype=torch.long)
-            y_ids = y[:, :-1].contiguous()
-            lm_labels = y[:, 1:].clone().detach()
-            lm_labels[y[:, 1:] == tokenizer.pad_token_id] = -100
+            y_ids = shift_tokens_right(y, tokenizer.pad_token_id)
+            lm_labels = y[:, :].clone().detach()
+            lm_labels[y[:, :] == tokenizer.pad_token_id] = -100
             ids = data["source_ids"].to(device, dtype=torch.long)
             mask = data["source_mask"].to(device, dtype=torch.long)
 
@@ -405,8 +390,6 @@ def val_step(epoch, tokenizer, model, device, loader):
                 decoder_input_ids=y_ids,
                 labels=lm_labels
             )
-
-            # FA: this is cross entropy loss between predicted and golden output
             loss = outputs[0]
             val_losses.append(loss.item())
 
